@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "search-lower-price": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/search-lower-price/dist/index.js"],
+      "env": {}
+    }
+  }
+}

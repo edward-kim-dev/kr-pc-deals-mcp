@@ -1,0 +1,44 @@
+{
+  "name": "kr-pc-deals-mcp",
+  "version": "1.0.1",
+  "description": "다나와/컴퓨존 PC 부품 가격비교 MCP 서버",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "kr-pc-deals-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "mcp",
+    "price-comparison",
+    "pc-parts",
+    "danawa",
+    "compuzone"
+  ],
+  "author": "edward-kim-dev",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "cheerio": "^1.2.0",
+    "iconv-lite": "^0.7.2",
+    "node-cache": "^5.1.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+
+# 개인 설정 (공개 제외)
+.mcp.json
+.claude/
+
+# 내부 문서 (공개 제외)
+docs/02-marketing-strategy.md
+docs/03-cursor-setup-guide.md
+docs/plans/
