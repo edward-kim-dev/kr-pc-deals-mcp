@@ -155,6 +155,80 @@ export async function zyteFetchRaw(
 }
 
 /**
+ * Zyte API를 통해 HTTP 요청을 프록시하고, 응답 본문과 헤더를 모두 반환한다.
+ * PCPartPicker 세션 초기화에 사용: HTML(본문)과 Set-Cookie(헤더) 모두 필요.
+ */
+export async function zyteFetchRawWithHeaders(
+  url: string,
+  source: string,
+  options?: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  }
+): Promise<{ body: string; headers: Array<{ name: string; value: string[] }> }> {
+  const apiKey = getZyteApiKey();
+  if (!apiKey) {
+    throw new ScrapingError(
+      source,
+      "Zyte API 키가 설정되지 않았습니다. ZYTE_API_KEY 환경변수를 설정해주세요."
+    );
+  }
+
+  const payload: ZyteExtractRequest = {
+    url,
+    httpResponseBody: true,
+    httpResponseHeaders: true,
+  };
+
+  if (options?.method) {
+    payload.httpRequestMethod = options.method;
+  }
+
+  if (options?.body) {
+    payload.httpRequestText = options.body;
+  }
+
+  if (options?.headers) {
+    payload.customHttpRequestHeaders = Object.entries(options.headers).map(
+      ([name, value]) => ({ name, value })
+    );
+  }
+
+  const response = await fetch(ZYTE_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new ScrapingError(
+      source,
+      `Zyte API 오류 (HTTP ${response.status}): ${errorText}`,
+      response.status
+    );
+  }
+
+  const data = (await response.json()) as ZyteExtractResponse;
+
+  if (!data.httpResponseBody) {
+    throw new ScrapingError(
+      source,
+      "Zyte API에서 응답 본문을 반환하지 않았습니다."
+    );
+  }
+
+  return {
+    body: Buffer.from(data.httpResponseBody, "base64").toString("utf-8"),
+    headers: data.httpResponseHeaders ?? [],
+  };
+}
+
+/**
  * Zyte API를 통해 JSON 응답을 가져옵니다.
  */
 export async function zyteFetchJson<T>(

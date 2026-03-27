@@ -1,20 +1,39 @@
 #!/usr/bin/env node
+/**
+ * kr-pc-deals-mcp — 한국 PC 부품 가격 비교 MCP 서버
+ *
+ * MCP(Model Context Protocol) 서버로, Claude 등 AI 어시스턴트가
+ * 다나와/컴퓨존 가격 검색과 부품 호환성 체크를 수행할 수 있게 한다.
+ *
+ * 제공하는 도구:
+ *   [검색] search_parts, get_product_detail, get_price_history
+ *   [비교] compare_prices, find_lowest_price, list_by_category
+ *   [빌드] build_add, build_remove, build_status, build_check_compatibility
+ *   [시스템] proxy_status
+ */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { searchDanawa, listByCategory, getProductDetail, getPriceHistory } from "./providers/danawa/index.js";
+// 다나와/컴퓨존 프로바이더
+import {
+  searchDanawa, listByCategory, getProductDetail, getPriceHistory,
+  getBuild, addPartToBuild, removePartFromBuild, checkBuildCompatibility,
+} from "./providers/danawa/index.js";
 import { searchCompuzone, getCompuzoneProductDetail } from "./providers/compuzone/index.js";
+
+// 가격 비교 서비스
 import { comparePrices, findLowestPrice } from "./services/price-compare.js";
-import { checkCompatibility, extractSocket, extractDDRType, extractTDP, extractWattage } from "./services/compatibility.js";
-import { estimateBuild, optimizeBuild } from "./services/build-estimator.js";
+
+// 유틸리티
 import { formatPrice } from "./utils/format.js";
 import { getProxyStatus } from "./utils/http.js";
 import { isZyteAvailable } from "./utils/zyte.js";
 import { ScrapingError } from "./core/errors.js";
-import type { PartCategory, Purpose, Source } from "./core/types.js";
+import type { PartCategory } from "./core/types.js";
 import { CATEGORY_LABELS } from "./core/types.js";
 
+/** 에러 객체를 사용자 친화적인 텍스트로 변환한다 */
 function errorToText(error: unknown): string {
   if (error instanceof ScrapingError) {
     if (error.statusCode === 429 || error.statusCode === 403) {
@@ -25,6 +44,7 @@ function errorToText(error: unknown): string {
   return `❌ 오류 발생: ${error instanceof Error ? error.message : String(error)}`;
 }
 
+// MCP 도구의 category 파라미터에 사용되는 enum 값 목록
 const PART_CATEGORIES = [
   "cpu", "gpu", "motherboard", "ram", "ssd", "hdd", "psu", "case", "cooler", "monitor",
 ] as const;
@@ -35,6 +55,7 @@ const server = new McpServer({
 });
 
 // ─── 검색 도구 ───
+// 다나와/컴퓨존에서 제품을 검색하고, 가격/스펙/판매처 정보를 조회한다.
 
 server.tool(
   "search_parts",
@@ -179,6 +200,7 @@ server.tool(
 );
 
 // ─── 가격 비교 도구 ───
+// 다나와와 컴퓨존 간 동일 제품의 가격을 비교하고 최저가를 찾는다.
 
 server.tool(
   "compare_prices",
@@ -278,174 +300,192 @@ server.tool(
   }
 );
 
-// ─── PC 견적 도구 ───
+// ─── 빌드(견적) 도구 ───
+//
+// 다나와 가상견적의 호환성 체크 API를 활용한다.
+// 부품을 추가한 뒤 호환성을 체크하면 CPU-메인보드-RAM 등의 호환 여부를 확인할 수 있다.
+// 다나와 제품만 빌드에 추가 가능하며, 컴퓨존은 가격 비교 전용.
+//
+// 사용 흐름: search_parts/list_by_category로 검색 → build_add → build_check_compatibility
+// 부품 추가 순서에 제한 없음.
 
 server.tool(
-  "estimate_build",
-  "예산과 용도에 맞는 PC 조립 견적을 추천합니다.",
+  "build_add",
+  "빌드에 다나와 부품을 추가합니다. 같은 카테고리의 기존 부품은 새 부품으로 교체됩니다. 2개 이상 추가 시 자동으로 호환성을 체크합니다.",
   {
-    budget: z.number().min(300000).describe("예산 (원, 최소 30만원)"),
-    purpose: z.enum(["gaming", "office", "workstation", "streaming"]).describe("용도"),
+    productId: z.string().describe("다나와 제품 코드 (다나와 제품 URL의 pcode= 값. 컴퓨존 제품은 사용 불가)"),
+    category: z.enum(PART_CATEGORIES).describe("부품 카테고리"),
+    name: z.string().describe("제품명 (빌드 상태 표시용)"),
+    price: z.number().min(0).default(0).describe("가격 (원)"),
   },
-  async ({ budget, purpose }) => {
-    const estimate = await estimateBuild(budget, purpose as Purpose);
+  async ({ productId, category, name, price }) => {
+    try {
+      addPartToBuild({
+        id: productId,
+        category: category as PartCategory,
+        name,
+        price,
+      });
 
-    const purposeLabels: Record<Purpose, string> = {
-      gaming: "게이밍",
-      office: "사무용",
-      workstation: "워크스테이션",
-      streaming: "방송/스트리밍",
-    };
-
-    const lines: string[] = [];
-    lines.push(`🖥️ ${purposeLabels[purpose as Purpose]} PC 견적 (예산: ${formatPrice(budget)})\n`);
-
-    for (const part of estimate.parts) {
-      lines.push(
-        `• ${CATEGORY_LABELS[part.category]}: ${part.product.name}` +
-        `\n  가격: ${formatPrice(part.product.lowestPrice)} (배정: ${formatPrice(part.allocatedBudget)})` +
-        `\n  링크: ${part.product.productUrl}`
+      const build = getBuild();
+      const buildLines = build.parts.map(
+        (p) => `• ${CATEGORY_LABELS[p.category]}: ${p.name}${p.price > 0 ? ` (${formatPrice(p.price)})` : ""}`
       );
-    }
 
-    lines.push(`\n─────────────────`);
-    lines.push(`총 금액: ${formatPrice(estimate.totalPrice)}`);
-    lines.push(`잔액: ${formatPrice(estimate.remainingBudget)}`);
+      const totalPrice = build.parts.reduce((sum, p) => sum + p.price, 0);
 
-    if (estimate.warnings.length > 0) {
-      lines.push(`\n【주의사항】`);
-      for (const w of estimate.warnings) {
-        lines.push(`• ${w}`);
+      let compatText = "";
+      // 부품이 2개 이상이면 자동으로 호환성 체크
+      if (build.parts.length >= 2) {
+        try {
+          const compat = await checkBuildCompatibility();
+          if (compat.pairs.length > 0) {
+            const pairLines = compat.pairs.map((pair) => {
+              const icon = pair.result === "0001" ? "✅" : "⚠️";
+              const msgs = Object.values(pair.messages).join(" / ");
+              return `  ${icon} ${pair.parts[0]}-${pair.parts[1]}: ${msgs}`;
+            });
+            compatText = `\n\n【호환성 체크】\n${compat.compatible ? "✅ 모든 부품 호환 가능" : "⚠️ 호환성 문제 발견"}\n${pairLines.join("\n")}`;
+          }
+        } catch {
+          compatText = "\n\n⚠️ 호환성 체크에 실패했습니다. build_check_compatibility로 다시 시도해보세요.";
+        }
       }
-    }
 
-    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
-  }
-);
-
-server.tool(
-  "check_compatibility",
-  "선택한 PC 부품 간 호환성을 체크합니다.",
-  {
-    cpu: z.string().optional().describe("CPU 제품명 (예: '인텔 코어 i7-14700K')"),
-    motherboard: z.string().optional().describe("메인보드 제품명"),
-    ram: z.string().optional().describe("RAM 제품명"),
-    gpu: z.string().optional().describe("그래픽카드 제품명"),
-    psu: z.string().optional().describe("파워서플라이 제품명"),
-  },
-  async ({ cpu, motherboard, ram, gpu, psu }) => {
-    const parts: Record<string, any> = {};
-
-    if (cpu) {
-      parts.cpu = {
-        name: cpu,
-        socket: extractSocket({}, cpu),
-        tdp: extractTDP({}, cpu),
-      };
-    }
-    if (motherboard) {
-      parts.motherboard = {
-        name: motherboard,
-        socket: extractSocket({}, motherboard),
-        ddrType: extractDDRType({}, motherboard),
-      };
-    }
-    if (ram) {
-      parts.ram = {
-        name: ram,
-        ddrType: extractDDRType({}, ram),
-      };
-    }
-    if (gpu) {
-      parts.gpu = { name: gpu, tdp: extractTDP({}, gpu) };
-    }
-    if (psu) {
-      parts.psu = { name: psu, wattage: extractWattage({}, psu) };
-    }
-
-    const result = checkCompatibility(parts);
-
-    const lines: string[] = [];
-    lines.push(`🔧 호환성 체크 결과: ${result.compatible ? "✅ 호환 가능" : "❌ 호환 문제 발견"}\n`);
-
-    if (result.errors.length > 0) {
-      lines.push(`【오류】`);
-      for (const e of result.errors) lines.push(`❌ ${e}`);
-    }
-
-    if (result.warnings.length > 0) {
-      lines.push(`\n【경고】`);
-      for (const w of result.warnings) lines.push(`⚠️ ${w}`);
-    }
-
-    if (Object.keys(result.details).length > 0) {
-      lines.push(`\n【상세】`);
-      for (const [k, v] of Object.entries(result.details)) {
-        lines.push(`✅ ${k}: ${v}`);
-      }
-    }
-
-    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
-  }
-);
-
-server.tool(
-  "optimize_build",
-  "기존 PC 견적을 가격 또는 성능 기준으로 최적화합니다.",
-  {
-    parts: z
-      .array(
-        z.object({
-          category: z.enum(PART_CATEGORIES),
-          productName: z.string(),
-          price: z.number(),
-        })
-      )
-      .describe("현재 부품 목록"),
-    optimizeFor: z.enum(["price", "performance"]).default("price").describe("최적화 기준"),
-  },
-  async ({ parts, optimizeFor }) => {
-    const result = await optimizeBuild(
-      parts.map((p) => ({
-        category: p.category as PartCategory,
-        productName: p.productName,
-        price: p.price,
-      })),
-      optimizeFor as "price" | "performance"
-    );
-
-    if (result.suggestions.length === 0) {
       return {
         content: [{
           type: "text" as const,
-          text: "현재 견적에서 더 나은 대안을 찾지 못했습니다. 이미 최적화된 구성입니다.",
+          text: `✅ "${name}" 추가 완료!\n\n` +
+            `【현재 빌드】\n${buildLines.join("\n")}` +
+            (totalPrice > 0 ? `\n\n합계: ${formatPrice(totalPrice)}` : "") +
+            compatText,
+        }],
+      };
+    } catch (error) {
+      return { content: [{ type: "text" as const, text: errorToText(error) }] };
+    }
+  }
+);
+
+server.tool(
+  "build_remove",
+  "빌드에서 특정 카테고리의 부품을 제거합니다.",
+  {
+    category: z.enum(PART_CATEGORIES).describe("제거할 부품의 카테고리"),
+  },
+  async ({ category }) => {
+    removePartFromBuild(category as PartCategory);
+    const build = getBuild();
+
+    if (build.parts.length === 0) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: `${CATEGORY_LABELS[category as PartCategory]} 부품을 제거했습니다. 빌드가 비어있습니다.`,
         }],
       };
     }
 
-    const lines: string[] = [];
-    lines.push(
-      `🔄 견적 최적화 결과 (${optimizeFor === "price" ? "가격 절감" : "성능 향상"} 기준)\n`
+    const buildLines = build.parts.map(
+      (p) => `• ${CATEGORY_LABELS[p.category]}: ${p.name}${p.price > 0 ? ` (${formatPrice(p.price)})` : ""}`
     );
 
-    for (const s of result.suggestions) {
-      lines.push(
-        `• ${CATEGORY_LABELS[s.category]}:` +
-        `\n  현재: ${s.current}` +
-        `\n  제안: ${s.suggested.name} (${formatPrice(s.suggested.lowestPrice)})` +
-        `\n  ${s.saving > 0 ? `절감: ${formatPrice(s.saving)}` : `추가: ${formatPrice(-s.saving)}`}`
+    return {
+      content: [{
+        type: "text" as const,
+        text: `${CATEGORY_LABELS[category as PartCategory]} 부품을 제거했습니다.\n\n` +
+          `【현재 빌드】\n${buildLines.join("\n")}`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "build_status",
+  "현재 빌드 상태(추가된 부품 목록, 합계 가격)를 조회합니다.",
+  {},
+  async () => {
+    const build = getBuild();
+
+    if (build.parts.length === 0) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: "현재 빌드에 추가된 부품이 없습니다.\nbuild_start로 새 빌드를 시작하세요.",
+        }],
+      };
+    }
+
+    const buildLines = build.parts.map(
+      (p) => `• ${CATEGORY_LABELS[p.category]}: ${p.name}${p.price > 0 ? ` (${formatPrice(p.price)})` : ""}`
+    );
+    const totalPrice = build.parts.reduce((sum, p) => sum + p.price, 0);
+
+    return {
+      content: [{
+        type: "text" as const,
+        text: `🖥️ 현재 빌드 (${build.parts.length}개 부품)\n\n${buildLines.join("\n")}` +
+          (totalPrice > 0 ? `\n\n합계: ${formatPrice(totalPrice)}` : ""),
+      }],
+    };
+  }
+);
+
+server.tool(
+  "build_check_compatibility",
+  "현재 빌드에 추가된 부품 간 호환성을 다나와 API로 체크합니다. CPU-메인보드 소켓, CPU-RAM 규격, RAM-메인보드 슬롯 등을 확인합니다.",
+  {},
+  async () => {
+    try {
+      const build = getBuild();
+
+      if (build.parts.length < 2) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: "호환성 체크에는 최소 2개의 부품이 필요합니다.\nbuild_add로 부품을 추가해주세요.",
+          }],
+        };
+      }
+
+      const result = await checkBuildCompatibility();
+
+      if (result.pairs.length === 0) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: "현재 빌드의 부품 조합에 대한 호환성 정보가 없습니다.\n(CPU, 메인보드, RAM 조합에서 호환성 체크가 지원됩니다.)",
+          }],
+        };
+      }
+
+      const pairLines = result.pairs.map((pair) => {
+        const icon = pair.result === "0001" ? "✅" : "⚠️";
+        const msgs = Object.values(pair.messages).join(" / ");
+        return `${icon} ${pair.parts[0]} ↔ ${pair.parts[1]}: ${msgs}`;
+      });
+
+      const buildLines = build.parts.map(
+        (p) => `• ${CATEGORY_LABELS[p.category]}: ${p.name}`
       );
-    }
 
-    if (result.totalSaving > 0) {
-      lines.push(`\n💰 총 절감액: ${formatPrice(result.totalSaving)}`);
+      return {
+        content: [{
+          type: "text" as const,
+          text: `🔍 호환성 체크 결과\n\n` +
+            `【빌드 구성】\n${buildLines.join("\n")}\n\n` +
+            `【호환성】\n${result.compatible ? "✅ 모든 부품 호환 가능" : "⚠️ 호환성 문제가 있습니다"}\n\n` +
+            pairLines.join("\n"),
+        }],
+      };
+    } catch (error) {
+      return { content: [{ type: "text" as const, text: errorToText(error) }] };
     }
-
-    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
   }
 );
 
 // ─── 시스템 도구 ───
+// 프록시 상태 확인, 디버깅용
 
 server.tool(
   "proxy_status",
@@ -481,6 +521,7 @@ server.tool(
 );
 
 // ─── 서버 시작 ───
+// stdio 전송 방식: Claude Desktop, MCP Inspector 등에서 stdin/stdout으로 통신
 
 async function main() {
   const transport = new StdioServerTransport();
