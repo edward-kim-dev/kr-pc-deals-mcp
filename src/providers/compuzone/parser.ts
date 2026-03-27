@@ -1,50 +1,6 @@
 import * as cheerio from "cheerio";
 import type { Product, PartCategory } from "../../core/types.js";
 
-// online_list.php 응답 파서 (카테고리 목록용)
-export function parseOnlineResults(html: string): Product[] {
-  const $ = cheerio.load(html);
-  const products: Product[] = [];
-
-  $("a[href*='detail_show']").each((_, el) => {
-    const $a = $(el);
-    const href = $a.attr("href") ?? "";
-    const idMatch = href.match(/detail_show\('?(\d+)'?\)/);
-    if (!idMatch) return;
-    const id = idMatch[1];
-
-    if (products.some((p) => p.id === id)) return;
-
-    const $row = $a.closest("tr");
-
-    // 제품명: td.name a b (b 태그가 정제된 이름, 나머지는 스펙 텍스트)
-    const name =
-      $row.find("td.name a b").first().text().trim() ||
-      $row.find("td.name a").first().text().trim();
-    if (!name) return;
-
-    const priceText = $row.find("span.black13").first().text().trim();
-    const priceMatch = priceText.match(/[\d,]+/);
-    const price = priceMatch ? parseInt(priceMatch[0].replace(/,/g, ""), 10) : 0;
-
-    const imageUrl = $row.find("a.imgbox img").first().attr("src") ?? undefined;
-    const productUrl = `https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=${id}`;
-
-    products.push({
-      id,
-      source: "compuzone",
-      name,
-      lowestPrice: price,
-      prices: [{ sellerName: "컴퓨존", price, shippingCost: 0, totalPrice: price, productUrl }],
-      specs: {},
-      imageUrl: imageUrl || undefined,
-      productUrl,
-    });
-  });
-
-  return products;
-}
-
 // search_list.php 응답 파서 (키워드 검색용)
 export function parseSearchResults(html: string): Product[] {
   const $ = cheerio.load(html);
@@ -134,6 +90,3 @@ export const COMPUZONE_ONLINE_CATEGORIES: Record<
   cooler: { big: "4", medium: "1020" },    // 실측: CPU쿨러 확인 ✓
   monitor: { big: "4", medium: "1022" },   // 실측: 삼성 모니터 확인 ✓
 };
-
-// 하위 호환: 기존 코드에서 참조하는 COMPUZONE_CATEGORIES
-export const COMPUZONE_CATEGORIES = COMPUZONE_ONLINE_CATEGORIES;

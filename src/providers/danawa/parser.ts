@@ -118,11 +118,6 @@ export function parseProductDetail(
   return { specs, prices };
 }
 
-export function parseCategoryList(html: string): Product[] {
-  // 카테고리 목록 페이지도 검색 결과와 유사한 구조
-  return parseSearchResults(html);
-}
-
 // 다나와 카테고리 코드 매핑
 export const DANAWA_CATEGORIES: Record<PartCategory, string> = {
   cpu: "112747",

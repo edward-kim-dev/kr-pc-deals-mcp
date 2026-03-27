@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   normalizeProductName,
-  extractModelNumber,
   calculateSimilarity,
   findBestMatch,
 } from "../../src/utils/normalize.js";
@@ -17,28 +16,6 @@ describe("normalizeProductName", () => {
 
   it("소문자 변환", () => {
     expect(normalizeProductName("NVIDIA RTX")).toBe("nvidia rtx");
-  });
-});
-
-describe("extractModelNumber", () => {
-  it("RTX 모델 추출", () => {
-    expect(extractModelNumber("ASUS GeForce RTX 4070 SUPER")).toBe("rtx 4070 super");
-  });
-
-  it("RX 모델 추출", () => {
-    expect(extractModelNumber("사파이어 Radeon RX 7900 XTX")).toBe("rx 7900 xtx");
-  });
-
-  it("인텔 CPU 모델 추출", () => {
-    expect(extractModelNumber("인텔 코어 i7-14700K")).toBe("i7-14700k");
-  });
-
-  it("DDR 추출", () => {
-    expect(extractModelNumber("삼성 DDR5-6000 16GB")).toBe("ddr5-6000");
-  });
-
-  it("모델 없으면 null", () => {
-    expect(extractModelNumber("일반 제품")).toBeNull();
   });
 });
 

@@ -12,32 +12,7 @@ export function normalizeProductName(name: string): string {
     .toLowerCase();
 }
 
-export function extractBrandAndModel(
-  name: string
-): { brand: string; model: string } | null {
-  const normalized = name.trim();
-
-  // 일반적 패턴: "브랜드 모델명 부가정보"
-  const patterns = [
-    // Intel/AMD CPU: "인텔 코어 i7-14700K" or "AMD 라이젠 9 7950X"
-    /^(인텔|intel|amd|AMD)\s+(.+?)(?:\s+정품|\s+벌크|\s+멀티팩)?$/i,
-    // GPU: "ASUS GeForce RTX 4070 SUPER" or "사파이어 라데온 RX 7900 XTX"
-    /^(\w+)\s+(GeForce|Radeon|라데온)\s+(.+?)(?:\s+D\d+)?(?:\s+\d+GB)?$/i,
-    // 일반: "삼성전자 990 PRO 2TB"
-    /^([\w가-힣]+)\s+(.+)$/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = normalized.match(pattern);
-    if (match) {
-      return { brand: match[1].toLowerCase(), model: match.slice(2).join(" ").toLowerCase() };
-    }
-  }
-
-  return null;
-}
-
-export function extractModelNumber(name: string): string | null {
+function extractModelNumber(name: string): string | null {
   // 모델번호 패턴 매칭 (예: RTX 4070, i7-14700K, RX 7900 XTX, DDR5-6000)
   const patterns = [
     /RTX\s*\d{4}\s*(?:Ti|SUPER)?/i,
