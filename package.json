@@ -1,6 +1,6 @@
 {
   "name": "kr-pc-deals-mcp",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "다나와/컴퓨존 PC 부품 가격비교 MCP 서버",
   "main": "dist/index.js",
   "type": "module",
