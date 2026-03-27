@@ -3,6 +3,7 @@ dist/
 .env
 .env.local
 *.log
+*.mov
 .DS_Store
 
 # 개인 설정 (공개 제외)
