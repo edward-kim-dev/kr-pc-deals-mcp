@@ -7,9 +7,10 @@
  */
 
 import { getCached, setCached, buildCacheKey } from "../../core/cache.js";
-import { getLimiter } from "../../utils/http.js";
+import { getLimiter, isBlocked } from "../../utils/http.js";
+import { ScrapingError } from "../../core/errors.js";
 import { getCoupangProviderMode } from "./mode.js";
-import { renderCoupangSearchPage } from "./browser.js";
+import { renderCoupangSearchPage, COUPANG_SOURCE } from "./browser.js";
 import { parseCoupangSearchResults } from "./parser.js";
 import type { Product, PartCategory } from "../../core/types.js";
 
@@ -35,8 +36,17 @@ export async function searchCoupang(
   const cached = getCached<Product[]>(cacheKey);
   if (cached) return cached;
 
+  // 차단(백오프) 상태면 limiter 슬롯·quota를 소모하지 않고 즉시 실패한다.
+  if (isBlocked(COUPANG_SOURCE)) {
+    throw new ScrapingError(
+      "coupang",
+      "쿠팡이 일시적으로 차단 상태입니다. 잠시 후 다시 시도해주세요.",
+      429
+    );
+  }
+
   // 브라우저 실행은 무거우므로 coupang-browser 전용 limiter(동시 1개)로 직렬화한다.
-  const limiter = getLimiter("coupang-browser");
+  const limiter = getLimiter(COUPANG_SOURCE);
   const html = await limiter.run(() => renderCoupangSearchPage(query));
   const products = parseCoupangSearchResults(html, options?.category).slice(
     0,

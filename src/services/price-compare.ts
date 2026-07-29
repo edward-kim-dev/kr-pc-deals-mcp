@@ -29,8 +29,8 @@ export async function comparePrices(
   const coupangNames = coupang.map((p) => p.name);
 
   for (const dProduct of danawa) {
-    const cMatch = findBestMatch(dProduct.name, compuzoneNames, 0.35);
-    const coupMatch = findBestMatch(dProduct.name, coupangNames, 0.35);
+    const cMatch = findBestMatch(dProduct.name, compuzoneNames, 0.4);
+    const coupMatch = findBestMatch(dProduct.name, coupangNames, 0.4);
 
     if (!cMatch && !coupMatch) continue;
 

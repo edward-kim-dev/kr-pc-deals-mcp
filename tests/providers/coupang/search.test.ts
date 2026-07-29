@@ -6,6 +6,7 @@ vi.mock("../../../src/providers/coupang/browser.js", () => ({
   renderCoupangSearchPage: renderMock,
   closeCoupangBrowser: vi.fn(),
   findCoupangBrowserExecutable: vi.fn(() => "/fake/chrome"),
+  COUPANG_SOURCE: "coupang-browser",
 }));
 
 import { searchCoupang } from "../../../src/providers/coupang/search.js";

@@ -3,6 +3,10 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { chromium, type Browser } from "playwright-core";
 import { ScrapingError } from "../../core/errors.js";
+import { isBlocked, markBlocked, clearBlocked } from "../../utils/http.js";
+
+/** 쿠팡 브라우저 경로의 회로 차단·동시성 키 (http.ts limiter와 동일) */
+export const COUPANG_SOURCE = "coupang-browser";
 
 const SEARCH_URL = "https://www.coupang.com/np/search";
 const NAVIGATION_TIMEOUT_MS = 30_000;
@@ -53,8 +57,23 @@ export function findCoupangBrowserExecutable(): string | null {
   return browserCandidates().find((candidate) => existsSync(candidate)) ?? null;
 }
 
-function getBrowser(): Promise<Browser> {
-  if (browserPromise) return browserPromise;
+/** 재사용 중인 브라우저와 UA 캐시를 비운다 (crash/disconnect 복구용). */
+function resetBrowserCache(): void {
+  browserPromise = null;
+  browserUserAgentPromise = null;
+}
+
+async function getBrowser(): Promise<Browser> {
+  // 캐시된 인스턴스가 살아있으면 재사용, 죽었으면(crash/disconnect) 캐시를 비우고 재기동.
+  if (browserPromise) {
+    try {
+      const existing = await browserPromise;
+      if (existing.isConnected()) return existing;
+    } catch {
+      // 이전 launch가 실패로 남아있는 경우 — 아래에서 재기동
+    }
+    resetBrowserCache();
+  }
 
   const executablePath = findCoupangBrowserExecutable();
   if (!executablePath) {
@@ -68,18 +87,27 @@ function getBrowser(): Promise<Browser> {
     );
   }
 
-  browserPromise = chromium
+  const launching = chromium
     .launch({
       executablePath,
       headless: true,
       args: ["--lang=ko-KR"],
     })
+    .then((browser) => {
+      // 브라우저가 비정상 종료되면 캐시를 무효화해 다음 호출에서 재기동되게 한다.
+      // 단, 이미 새 세대로 교체된 뒤라면(browserPromise !== launching) 건드리지 않는다.
+      browser.on("disconnected", () => {
+        if (browserPromise === launching) resetBrowserCache();
+      });
+      return browser;
+    })
     .catch((error) => {
-      browserPromise = null;
+      if (browserPromise === launching) browserPromise = null;
       throw error;
     });
 
-  return browserPromise;
+  browserPromise = launching;
+  return launching;
 }
 
 /**
@@ -106,6 +134,15 @@ async function getBrowserUserAgent(browser: Browser): Promise<string> {
 
 /** 로그인/쿠키 없이 새 브라우저 컨텍스트에서 쿠팡 검색 결과 HTML을 렌더링한다. */
 export async function renderCoupangSearchPage(query: string): Promise<string> {
+  // 직전에 403/429/보안확인으로 차단됐다면 무거운 브라우저를 띄우지 않고 즉시 실패한다.
+  if (isBlocked(COUPANG_SOURCE)) {
+    throw new ScrapingError(
+      "coupang",
+      "쿠팡이 일시적으로 차단 상태입니다. 잠시 후 다시 시도해주세요.",
+      429
+    );
+  }
+
   try {
     const browser = await getBrowser();
     const userAgent = await getBrowserUserAgent(browser);
@@ -124,6 +161,8 @@ export async function renderCoupangSearchPage(query: string): Promise<string> {
 
       const status = response?.status() ?? 0;
       if (status === 403 || status === 429) {
+        // 차단 상태를 기록해 다음 호출들이 백오프(30초→최대 5분)되게 한다.
+        markBlocked(COUPANG_SOURCE, status);
         throw new ScrapingError(
           "coupang",
           `브라우저 요청이 차단되었습니다. (HTTP ${status})`,
@@ -146,13 +185,19 @@ export async function renderCoupangSearchPage(query: string): Promise<string> {
 
       const title = await page.title();
       if (/access denied|captcha|보안 확인/i.test(title)) {
+        // 봇 감지(캡차/보안확인)도 차단으로 취급해 백오프한다.
+        markBlocked(COUPANG_SOURCE, 429);
         throw new ScrapingError(
           "coupang",
-          "쿠팡에서 추가 확인을 요구해 검색 결과를 가져오지 못했습니다."
+          "쿠팡에서 추가 확인을 요구해 검색 결과를 가져오지 못했습니다.",
+          429
         );
       }
 
-      return await page.content();
+      const html = await page.content();
+      // 정상 응답을 받았으므로 이전 백오프를 리셋한다.
+      clearBlocked(COUPANG_SOURCE);
+      return html;
     } finally {
       await context.close();
     }

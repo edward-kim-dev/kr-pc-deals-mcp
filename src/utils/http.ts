@@ -18,20 +18,44 @@ const USER_AGENTS = [
 
 // ─── 사이트별 독립 동시성 제어 (세마포어 패턴) ───
 
+const MINUTE_MS = 60_000;
+const DAY_MS = 86_400_000;
+
+/**
+ * ConcurrencyLimiter 옵션.
+ * - maxPerMinute / maxPerDay: 슬라이딩 윈도우 요청 총량 상한. 초과 시 ScrapingError(429)로 즉시 거부.
+ * - label: quota 초과 에러 메시지에 표기할 소스명.
+ * - now: 시각 함수 주입(테스트용). 미지정 시 Date.now.
+ */
+export interface LimiterOptions {
+  maxPerMinute?: number;
+  maxPerDay?: number;
+  label?: string;
+  now?: () => number;
+}
+
 /**
  * 세마포어 기반 동시성 제어기.
  * - maxConcurrent: 동시에 실행할 수 있는 최대 요청 수
  * - minIntervalMs: 요청 시작 간 최소 간격 (ms)
+ * - options.maxPerMinute / maxPerDay: 분당·일일 누적 요청 상한 (초과 시 429로 거부)
  */
 export class ConcurrencyLimiter {
   private running = 0;
   private queue: Array<() => void> = [];
   private lastRequestTime = 0;
+  /** quota 집계용 요청 승인 타임스탬프 (슬라이딩 윈도우) */
+  private requestTimes: number[] = [];
 
   constructor(
     private maxConcurrent: number,
-    private minIntervalMs: number
+    private minIntervalMs: number,
+    private options: LimiterOptions = {}
   ) {}
+
+  private now(): number {
+    return this.options.now ? this.options.now() : Date.now();
+  }
 
   async run<T>(fn: () => Promise<T>): Promise<T> {
     await this.acquire();
@@ -42,21 +66,71 @@ export class ConcurrencyLimiter {
     }
   }
 
+  /** 분당·일일 상한을 검사한다. 초과 시 ScrapingError(429)를 던진다. */
+  private checkQuota(): void {
+    const { maxPerMinute, maxPerDay, label } = this.options;
+    if (!maxPerMinute && !maxPerDay) return;
+
+    const now = this.now();
+    // 하루가 지난 기록은 정리
+    this.requestTimes = this.requestTimes.filter((t) => now - t < DAY_MS);
+
+    if (maxPerDay && this.requestTimes.length >= maxPerDay) {
+      throw new ScrapingError(
+        label ?? "rate-limit",
+        `일일 요청 한도(${maxPerDay}건)를 초과했습니다. 잠시 후 다시 시도해주세요.`,
+        429
+      );
+    }
+    if (maxPerMinute) {
+      const inMinute = this.requestTimes.filter((t) => now - t < MINUTE_MS).length;
+      if (inMinute >= maxPerMinute) {
+        throw new ScrapingError(
+          label ?? "rate-limit",
+          `분당 요청 한도(${maxPerMinute}건)를 초과했습니다. 잠시 후 다시 시도해주세요.`,
+          429
+        );
+      }
+    }
+  }
+
   private async acquire(): Promise<void> {
-    const now = Date.now();
-    const elapsed = now - this.lastRequestTime;
-    if (elapsed < this.minIntervalMs) {
-      await new Promise((r) => setTimeout(r, this.minIntervalMs - elapsed));
+    // 1) 빠른 실패: 이미 상한 초과면 대기 없이 즉시 거부한다.
+    this.checkQuota();
+
+    // 2) 동시성 슬롯과 최소 간격을 모두 만족할 때까지 반복 확인한다.
+    //    각 대기(await) 후 상태가 바뀔 수 있으므로 처음부터 다시 검사한다.
+    //    (minInterval을 concurrency 게이트 이후에도 재적용하여 큐에서 풀린 요청도 간격을 지킨다.)
+    for (;;) {
+      if (this.running >= this.maxConcurrent) {
+        await new Promise<void>((resolve) => {
+          this.queue.push(resolve);
+        });
+        continue;
+      }
+      const wait = this.minIntervalMs - (this.now() - this.lastRequestTime);
+      if (wait > 0) {
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      break;
     }
 
-    if (this.running >= this.maxConcurrent) {
-      await new Promise<void>((resolve) => {
-        this.queue.push(resolve);
-      });
-    }
-
+    // 3) grant: 슬롯을 먼저 점유한 뒤 상한을 grant 시점에 원자적으로(await 없이) 재검사한다.
+    //    stale 검사가 아닌 grant 시점 검사여야 동시 버스트에서도 상한이 강제된다.
+    //    초과로 거부할 때는 점유한 슬롯을 반납(release)하여 대기 중인 다음 요청이 굶지 않게 한다.
     this.running++;
-    this.lastRequestTime = Date.now();
+    try {
+      this.checkQuota();
+    } catch (error) {
+      this.release();
+      throw error;
+    }
+    const grantTime = this.now();
+    this.lastRequestTime = grantTime;
+    if (this.options.maxPerMinute || this.options.maxPerDay) {
+      this.requestTimes.push(grantTime);
+    }
   }
 
   private release(): void {
@@ -66,11 +140,13 @@ export class ConcurrencyLimiter {
   }
 }
 
+// 사이트별 동시성/간격 + 분당·일일 요청 상한. 값은 보수적 기본치이며 필요 시 조정한다.
 const limiters: Record<string, ConcurrencyLimiter> = {
-  danawa: new ConcurrencyLimiter(3, 500),
-  compuzone: new ConcurrencyLimiter(2, 1000),
-  "coupang-browser": new ConcurrencyLimiter(1, 1500), // 공개 검색 페이지 (브라우저는 직렬화)
-  default: new ConcurrencyLimiter(2, 1000),
+  danawa: new ConcurrencyLimiter(3, 500, { label: "danawa", maxPerMinute: 60, maxPerDay: 5000 }),
+  compuzone: new ConcurrencyLimiter(2, 1000, { label: "compuzone", maxPerMinute: 30, maxPerDay: 3000 }),
+  // 공개 검색 페이지 (브라우저는 무거우므로 직렬화 + 보수적 상한)
+  "coupang-browser": new ConcurrencyLimiter(1, 1500, { label: "coupang", maxPerMinute: 15, maxPerDay: 300 }),
+  default: new ConcurrencyLimiter(2, 1000, { label: "site", maxPerMinute: 30, maxPerDay: 2000 }),
 };
 
 export function getLimiter(source: string): ConcurrencyLimiter {
@@ -88,12 +164,14 @@ function getRandomUserAgent(): string {
 
 const blockStatus: Record<string, { blockedUntil: number; backoffMs: number }> = {};
 
-function isBlocked(source: string): boolean {
+/** 해당 source가 현재 백오프 차단 상태인지 확인한다. (fetch·브라우저 경로 공용) */
+export function isBlocked(source: string): boolean {
   const status = blockStatus[source];
   return !!status && Date.now() < status.blockedUntil;
 }
 
-function markBlocked(source: string, statusCode?: number): void {
+/** 429/403 응답을 받은 source를 지수 백오프로 차단 표시한다. (fetch·브라우저 경로 공용) */
+export function markBlocked(source: string, statusCode?: number): void {
   if (statusCode === 429 || statusCode === 403) {
     const current = blockStatus[source];
     const backoffMs = current
@@ -106,7 +184,8 @@ function markBlocked(source: string, statusCode?: number): void {
   }
 }
 
-function clearBlocked(source: string): void {
+/** 요청 성공 시 source의 차단 상태와 백오프를 리셋한다. (fetch·브라우저 경로 공용) */
+export function clearBlocked(source: string): void {
   delete blockStatus[source];
 }
 
