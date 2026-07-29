@@ -26,16 +26,6 @@ export function buildProductListUrl(
   return `${ESTIMATE_BASE_URL}?${params}`;
 }
 
-export function buildSpecSearchUrl(categorySeq: number, keyword: string): string {
-  const params = new URLSearchParams({
-    controller: "estimateMain",
-    methods: "searchOption",
-    marketPlaceSeq: String(ESTIMATE_MARKETPLACE_SEQ),
-    categorySeq: String(categorySeq),
-  });
-  return `${ESTIMATE_BASE_URL}?${params}&name=${encodeURIComponent(keyword)}`;
-}
-
 export async function fetchProductListHtml(
   categorySeq: number,
   page: number,
@@ -51,19 +41,5 @@ export async function fetchProductListHtml(
     headers: { Referer: ESTIMATE_BASE_URL },
   });
   setCached(cacheKey, html, "search");
-  return html;
-}
-
-export async function fetchSpecSearchHtml(
-  categorySeq: number,
-  keyword: string
-): Promise<string> {
-  const cacheKey = buildCacheKey("danawa-estimate", "spec", String(categorySeq), keyword);
-  const cached = getCached<string>(cacheKey);
-  if (cached) return cached;
-
-  const url = buildSpecSearchUrl(categorySeq, keyword);
-  const html = await fetchHtml(url, "danawa");
-  setCached(cacheKey, html, "priceHistory");
   return html;
 }

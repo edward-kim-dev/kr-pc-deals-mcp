@@ -24,15 +24,6 @@ let currentBuild: Build = {
   createdAt: Date.now(),
 };
 
-/** 새 빌드를 시작한다 (기존 상태 초기화) */
-export function startBuild(): Build {
-  currentBuild = {
-    parts: [],
-    createdAt: Date.now(),
-  };
-  return currentBuild;
-}
-
 /** 현재 빌드 상태를 반환한다 */
 export function getBuild(): Build {
   return currentBuild;

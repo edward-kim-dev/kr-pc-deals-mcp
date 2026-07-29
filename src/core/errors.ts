@@ -13,11 +13,3 @@ export class ScrapingError extends Error {
     this.name = "ScrapingError";
   }
 }
-
-/** 호환성 검사 실패 시 사용하는 에러 */
-export class CompatibilityError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "CompatibilityError";
-  }
-}

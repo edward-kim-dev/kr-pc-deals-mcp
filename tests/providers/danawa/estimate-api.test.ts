@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildProductListUrl, buildSpecSearchUrl } from "../../../src/providers/danawa/estimate-api.js";
+import { buildProductListUrl } from "../../../src/providers/danawa/estimate-api.js";
 
 describe("buildProductListUrl", () => {
   it("올바른 URL 생성 — categorySeq와 page 포함", () => {
@@ -21,15 +21,5 @@ describe("buildProductListUrl", () => {
     const url = buildProductListUrl(876, 1, "RTX 5090");
     expect(url).toContain("name=RTX+5090");
     expect(url).toContain("categorySeq=876");
-  });
-});
-
-describe("buildSpecSearchUrl", () => {
-  it("올바른 URL 생성 — keyword 인코딩 포함", () => {
-    const url = buildSpecSearchUrl(873, "라이젠 7");
-    expect(url).toContain("controller=estimateMain");
-    expect(url).toContain("methods=searchOption");
-    expect(url).toContain("categorySeq=873");
-    expect(url).toContain(encodeURIComponent("라이젠 7"));
   });
 });
