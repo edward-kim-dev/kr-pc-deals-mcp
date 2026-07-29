@@ -29,7 +29,7 @@ Claude, ChatGPT, Cursor 등 MCP를 지원하는 모든 AI 앱에서 사용할 �
 
 ## 빠른 시작
 
-다나와/컴퓨존만 사용하려면 아래 설정으로 충분합니다. 쿠팡 데이터까지 활용하려면 [쿠팡 활성화](#쿠팡-활성화-선택) 섹션을 참고하세요.
+다나와/컴퓨존만 사용하려면 아래 설정으로 충분합니다. 쿠팡 데이터까지 활용하려면 [쿠팡 활성화](#쿠팡-활성화-선택-실험적) 섹션을 참고하세요.
 
 ### Claude Desktop
 
@@ -69,14 +69,10 @@ claude mcp add kr-pc-deals-mcp npx -- -y kr-pc-deals-mcp
 
 ---
 
-## 쿠팡 활성화 (선택)
+## 쿠팡 활성화 (선택, 실험적)
 
-쿠팡 가격까지 비교에 포함하려면 쿠팡 파트너스 Open API 키가 필요합니다.
-
-1. [쿠팡 파트너스](https://partners.coupang.com)에 가입하고 Open API 키를 발급받습니다.
-2. MCP 클라이언트 설정의 `env` 필드에 키를 넣습니다.
-
-### Claude Desktop / Cursor
+쿠팡은 설치된 Chrome 계열 브라우저로 공개 검색 페이지를 읽는 **브라우저 모드**로만 지원됩니다.
+MCP 클라이언트 설정의 `env`에 아래 값을 추가하면 활성화됩니다. (미설정 시 다나와/컴퓨존만 동작)
 
 ```json
 {
@@ -85,24 +81,24 @@ claude mcp add kr-pc-deals-mcp npx -- -y kr-pc-deals-mcp
       "command": "npx",
       "args": ["-y", "kr-pc-deals-mcp"],
       "env": {
-        "COUPANG_ACCESS_KEY": "발급받은_access_key",
-        "COUPANG_SECRET_KEY": "발급받은_secret_key"
+        "COUPANG_MODE": "browser"
       }
     }
   }
 }
 ```
 
-### Claude Code
+Claude Code:
 
 ```bash
-claude mcp add kr-pc-deals-mcp \
-  -e COUPANG_ACCESS_KEY=발급받은_access_key \
-  -e COUPANG_SECRET_KEY=발급받은_secret_key \
-  npx -- -y kr-pc-deals-mcp
+claude mcp add kr-pc-deals-mcp -e COUPANG_MODE=browser npx -- -y kr-pc-deals-mcp
 ```
 
-> 두 키가 **모두** 설정되어야 쿠팡 검색이 활성화됩니다. 하나만 있으면 비활성 상태로 동작합니다.
+- Google Chrome, Microsoft Edge 또는 Chromium이 설치되어 있어야 합니다.
+- 로그인 정보나 기존 브라우저 쿠키를 사용하지 않으며, 별도의 백그라운드 브라우저를 실행합니다.
+- 브라우저가 자동 탐지되지 않으면 `COUPANG_BROWSER_EXECUTABLE_PATH`에 실행 파일의 절대 경로를 지정할 수 있습니다.
+
+> ⚠️ **개인 용도 한정.** 브라우저 모드는 쿠팡 이용약관 및 페이지 구조 변경에 따라 언제든 동작하지 않을 수 있으며, 안정성이 보장되지 않습니다.
 
 ---
 
@@ -154,14 +150,14 @@ npm test
 
 | 변수 | 설명 | 기본값 |
 |------|------|--------|
-| `COUPANG_ACCESS_KEY` | 쿠팡 파트너스 Open API access key | 미설정 (쿠팡 데이터 비활성) |
-| `COUPANG_SECRET_KEY` | 쿠팡 파트너스 Open API secret key | 미설정 (쿠팡 데이터 비활성) |
+| `COUPANG_MODE` | `browser` 지정 시 쿠팡 브라우저 검색 활성화 | 미설정 (쿠팡 비활성) |
+| `COUPANG_BROWSER_EXECUTABLE_PATH` | Chrome 계열 실행 파일 절대 경로 | 자동 탐지 |
 
 ### 환경변수 전달 방법
 
 | 실행 방식 | 전달 방법 |
 |---|---|
-| **npx (Claude Desktop/Code/Cursor 등 MCP 클라이언트)** | 클라이언트 설정 파일의 `env` 필드에 직접 입력 — [쿠팡 활성화](#쿠팡-활성화-선택) 참고 |
+| **npx (Claude Desktop/Code/Cursor 등 MCP 클라이언트)** | 클라이언트 설정 파일의 `env` 필드에 직접 입력 — [쿠팡 활성화](#쿠팡-활성화-선택-실험적) 참고 |
 | **로컬 개발 (`git clone` 후 `npm run dev`)** | 프로젝트 루트에 `.env` 파일 생성 (`cp .env.example .env`) |
 
 > `.env` 파일은 로컬 개발 시에만 자동 로드됩니다. npx로 실행되는 MCP 서버는 `.env`를 찾을 수 없으므로, 반드시 MCP 클라이언트 설정의 `env` 필드를 사용하세요.
@@ -234,7 +230,7 @@ CPU, 그래픽카드, 메인보드, RAM, SSD, HDD, 파워서플라이, 케이스
 kr-pc-deals-mcp Server
   ├── 다나와 Provider (검색, 상세, 가격이력, 가상견적, 호환성 API)
   ├── 컴퓨존 Provider (검색, 상세)
-  ├── 쿠팡 Provider (선택, 파트너스 Open API)
+  ├── 쿠팡 Provider (선택, 브라우저 공개 검색 — COUPANG_MODE=browser)
   └── 가격 비교 Service (크로스사이트 매칭)
 ```
 
@@ -242,7 +238,7 @@ kr-pc-deals-mcp Server
 
 | 단계 | 설명 |
 | ------ | ------ |
-| 사이트별 동시성 제어 | 다나와 최대 3건/500ms, 컴퓨존 최대 2건/1,000ms |
+| 사이트별 동시성 제어 | 다나와 최대 3건/500ms, 컴퓨존 최대 2건/1,000ms, 쿠팡 브라우저 1건/1,500ms |
 | 인메모리 캐시 | 동일 검색 결과 재사용 |
 | 지수 백오프 | 차단 시 30초 → 60초 → 120초 → 최대 5분 |
 
@@ -271,7 +267,7 @@ npm run build
 이 소프트웨어는 **개인적, 비상업적 용도로만** 사용하십시오.
 
 - 이 도구는 공개된 웹페이지의 가격 정보를 수집합니다.
-- 다나와 및 컴퓨존의 이용약관을 준수할 책임은 **사용자 본인**에게 있습니다.
+- 다나와, 컴퓨존, 쿠팡(브라우저 모드)의 이용약관을 준수할 책임은 **사용자 본인**에게 있습니다.
 - 과도한 요청으로 서버에 부하를 주는 행위는 금지합니다.
 - 수집한 데이터를 상업적으로 활용하거나 재배포하는 행위는 금지합니다.
 - 이 소프트웨어 사용으로 인한 법적 책임은 개발자가 지지 않습니다.

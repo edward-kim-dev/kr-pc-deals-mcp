@@ -11,7 +11,8 @@
  *   [빌드] build_add, build_remove, build_status, build_check_compatibility
  *
  * 환경변수:
- *   COUPANG_ACCESS_KEY / COUPANG_SECRET_KEY (선택) — 쿠팡 파트너스 Open API 활성화
+ *   COUPANG_MODE=browser (선택) — 설치된 Chrome 계열 브라우저로 쿠팡 공개 검색 페이지 사용
+ *   COUPANG_BROWSER_EXECUTABLE_PATH (선택) — 브라우저 자동 탐지 실패 시 실행 파일 경로 지정
  *   .env 파일이 있으면 자동 로드되지만, npx로 실행하는 일반적 경우에는
  *   MCP 클라이언트 설정(claude_desktop_config.json 등)의 env 필드로 전달한다.
  */
@@ -29,7 +30,11 @@ import {
   getBuild, addPartToBuild, removePartFromBuild, checkBuildCompatibility,
 } from "./providers/danawa/index.js";
 import { searchCompuzone, getCompuzoneProductDetail } from "./providers/compuzone/index.js";
-import { searchCoupang, isCoupangAvailable } from "./providers/coupang/index.js";
+import {
+  searchCoupang,
+  isCoupangAvailable,
+  closeCoupangBrowser,
+} from "./providers/coupang/index.js";
 
 // 가격 비교 서비스
 import { comparePrices, findLowestPrice } from "./services/price-compare.js";
@@ -66,7 +71,7 @@ const server = new McpServer({
 
 server.tool(
   "search_parts",
-  "PC 부품을 키워드로 검색합니다. 다나와, 컴퓨존, 쿠팡(키 설정 시) 또는 전체에서 검색할 수 있습니다.",
+  "PC 부품을 키워드로 검색합니다. 다나와, 컴퓨존, 쿠팡(브라우저 모드 시) 또는 전체에서 검색할 수 있습니다.",
   {
     query: z.string().describe("검색 키워드 (예: 'RTX 4070 SUPER', 'i7-14700K')"),
     category: z.enum(PART_CATEGORIES).optional().describe("부품 카테고리 필터"),
@@ -116,7 +121,7 @@ server.tool(
           return {
             content: [{
               type: "text" as const,
-              text: "ℹ️ 쿠팡 검색을 사용하려면 COUPANG_ACCESS_KEY와 COUPANG_SECRET_KEY 환경변수를 설정하세요. (https://partners.coupang.com)",
+              text: "ℹ️ 쿠팡 검색을 사용하려면 실험적 브라우저 모드(COUPANG_MODE=browser)를 활성화하세요. Chrome 계열 브라우저가 설치되어 있어야 합니다.",
             }],
           };
         }
@@ -246,7 +251,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 server.tool(
   "compare_prices",
-  "동일 제품의 다나와/컴퓨존/쿠팡(키 설정 시) 간 가격을 비교합니다.",
+  "동일 제품의 다나와/컴퓨존/쿠팡(브라우저 모드 시) 간 가격을 비교합니다.",
   {
     query: z.string().describe("검색 키워드"),
     category: z.enum(PART_CATEGORIES).optional().describe("부품 카테고리"),
@@ -292,7 +297,7 @@ server.tool(
 
 server.tool(
   "find_lowest_price",
-  "특정 부품의 다나와/컴퓨존/쿠팡(키 설정 시) 통합 최저가를 찾습니다.",
+  "특정 부품의 다나와/컴퓨존/쿠팡(브라우저 모드 시) 통합 최저가를 찾습니다.",
   {
     query: z.string().describe("검색 키워드"),
     category: z.enum(PART_CATEGORIES).optional().describe("부품 카테고리"),
@@ -547,6 +552,19 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("kr-pc-deals-mcp 서버가 시작되었습니다.");
+
+  let shuttingDown = false;
+  const shutdown = async (exitCode?: number) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    await closeCoupangBrowser();
+    await server.close();
+    if (exitCode !== undefined) process.exit(exitCode);
+  };
+
+  process.stdin.once("end", () => void shutdown());
+  process.once("SIGINT", () => void shutdown(0));
+  process.once("SIGTERM", () => void shutdown(0));
 }
 
 main().catch((error) => {

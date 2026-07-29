@@ -42,6 +42,7 @@
     "dotenv": "^17.4.2",
     "iconv-lite": "^0.7.2",
     "node-cache": "^5.1.2",
+    "playwright-core": "^1.62.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

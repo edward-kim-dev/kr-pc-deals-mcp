@@ -260,6 +260,23 @@ GET https://www.compuzone.co.kr/product/product_detail.htm
 
 ---
 
+## 쿠팡 (Coupang)
+
+### 9. 공개 검색 페이지 (실험적)
+
+```
+GET https://www.coupang.com/np/search?q={검색어}
+```
+
+- **활성화**: `COUPANG_MODE=browser`
+- **실행 방식**: 로컬에 설치된 Chrome 계열 브라우저로 로그인 없이 렌더링
+- **파싱 범위**: `#product-list` 내부 상품 카드
+- **추출 정보**: 상품 ID, 상품명, 현재가, 배송비, 로켓배송, 리뷰 수, 이미지, 상품 URL
+- **동시성**: 최대 1건, 요청 시작 간격 1,500ms
+- **사용처**: `searchCoupang()` (쿠팡의 유일한 구현)
+
+---
+
 ## HTTP 클라이언트 설정
 
 ### 동시성 제어
@@ -268,6 +285,7 @@ GET https://www.compuzone.co.kr/product/product_detail.htm
 |---|---|---|
 | 다나와 | 3 | 500ms |
 | 컴퓨존 | 2 | 1,000ms |
+| 쿠팡 브라우저 | 1 | 1,500ms |
 | 기본값 | 2 | 1,000ms |
 
 ### User-Agent 로테이션

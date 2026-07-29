@@ -69,7 +69,7 @@ export class ConcurrencyLimiter {
 const limiters: Record<string, ConcurrencyLimiter> = {
   danawa: new ConcurrencyLimiter(3, 500),
   compuzone: new ConcurrencyLimiter(2, 1000),
-  coupang: new ConcurrencyLimiter(3, 200),    // 공식 API는 응답 빠름
+  "coupang-browser": new ConcurrencyLimiter(1, 1500), // 공개 검색 페이지 (브라우저는 직렬화)
   default: new ConcurrencyLimiter(2, 1000),
 };
 

@@ -1,129 +1,79 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
+// 실제 브라우저를 띄우지 않도록 browser 모듈을 모킹한다.
+const { renderMock } = vi.hoisted(() => ({ renderMock: vi.fn() }));
+vi.mock("../../../src/providers/coupang/browser.js", () => ({
+  renderCoupangSearchPage: renderMock,
+  closeCoupangBrowser: vi.fn(),
+  findCoupangBrowserExecutable: vi.fn(() => "/fake/chrome"),
+}));
+
 import { searchCoupang } from "../../../src/providers/coupang/search.js";
 import { clearCache } from "../../../src/core/cache.js";
-import { ScrapingError } from "../../../src/core/errors.js";
+
+function fixture(count: number): string {
+  const items = Array.from({ length: count }, (_, i) => `
+    <li data-id="v${i}">
+      <a href="/vp/products/${1000 + i}?itemId=${i}&vendorItemId=${i}">
+        <figure><img alt="테스트 부품 ${i}" src="https://img/${i}.jpg"></figure>
+        <div class="PriceArea_priceArea__x"><div><span>${(i + 1) * 10},000원</span></div></div>
+        <div data-badge-id="ROCKET_MERCHANT"></div>
+      </a>
+    </li>`).join("");
+  return `<ul id="product-list">${items}</ul>`;
+}
 
 const ORIGINAL_ENV = { ...process.env };
 
-/** fetch를 지정한 Response 유사 객체로 스텁 */
-function stubFetch(impl: () => Partial<Response> & { json?: () => Promise<unknown> }) {
-  const fn = vi.fn(async () => impl() as Response);
-  vi.stubGlobal("fetch", fn);
-  return fn;
-}
-
-function okJson(body: unknown) {
-  return { ok: true, status: 200, statusText: "OK", json: async () => body };
-}
-
 beforeEach(() => {
   clearCache();
-  process.env.COUPANG_ACCESS_KEY = "test-access";
-  process.env.COUPANG_SECRET_KEY = "test-secret";
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
+  renderMock.mockReset();
   process.env = { ...ORIGINAL_ENV };
 });
 
-describe("searchCoupang", () => {
-  it("키가 없으면 fetch 없이 빈 배열 반환", async () => {
-    delete process.env.COUPANG_ACCESS_KEY;
-    delete process.env.COUPANG_SECRET_KEY;
-    const fetchMock = stubFetch(() => okJson({ rCode: "0", data: { productData: [] } }));
+afterEach(() => {
+  process.env = { ...ORIGINAL_ENV };
+});
 
-    const result = await searchCoupang("아무거나");
+describe("searchCoupang (browser mode)", () => {
+  it("COUPANG_MODE 미설정 시 브라우저를 띄우지 않고 빈 배열", async () => {
+    delete process.env.COUPANG_MODE;
+    const result = await searchCoupang("7800X3D");
     expect(result).toEqual([]);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(renderMock).not.toHaveBeenCalled();
   });
 
-  it("productData를 Product[]로 변환", async () => {
-    stubFetch(() =>
-      okJson({
-        rCode: "0",
-        rMessage: "",
-        data: {
-          productData: [
-            {
-              productId: 12345,
-              productName: "AMD 라이젠7 7800X3D",
-              productPrice: 499000,
-              productImage: "https://img/1.jpg",
-              productUrl: "https://coupang/1",
-              isRocket: true,
-              categoryName: "CPU",
-            },
-          ],
-        },
-      })
-    );
+  it("browser 모드에서 렌더링된 HTML을 파싱해 반환", async () => {
+    process.env.COUPANG_MODE = "browser";
+    renderMock.mockResolvedValue(fixture(1));
 
     const result = await searchCoupang("7800X3D", { category: "cpu" });
+
+    expect(renderMock).toHaveBeenCalledTimes(1);
+    expect(renderMock).toHaveBeenCalledWith("7800X3D");
     expect(result).toHaveLength(1);
-    const p = result[0];
-    expect(p.id).toBe("12345");
-    expect(p.source).toBe("coupang");
-    expect(p.name).toBe("AMD 라이젠7 7800X3D");
-    expect(p.category).toBe("cpu");
-    expect(p.lowestPrice).toBe(499000);
-    expect(p.prices[0].sellerName).toBe("쿠팡 로켓배송");
-    expect(p.prices[0].totalPrice).toBe(499000);
-    expect(p.prices[0].productUrl).toBe("https://coupang/1");
-    expect(p.specs["카테고리"]).toBe("CPU");
-    expect(p.imageUrl).toBe("https://img/1.jpg");
+    expect(result[0]).toMatchObject({
+      source: "coupang",
+      category: "cpu",
+      lowestPrice: 10000,
+    });
+    expect(result[0].prices[0].sellerName).toBe("쿠팡 로켓배송");
   });
 
-  it("isRocket=false면 판매처명은 '쿠팡'", async () => {
-    stubFetch(() =>
-      okJson({
-        rCode: "0",
-        data: {
-          productData: [
-            {
-              productId: 1,
-              productName: "일반배송 상품",
-              productPrice: 10000,
-              productImage: "",
-              productUrl: "https://coupang/x",
-              isRocket: false,
-            },
-          ],
-        },
-      })
-    );
+  it("limit으로 결과 수를 제한", async () => {
+    process.env.COUPANG_MODE = "browser";
+    renderMock.mockResolvedValue(fixture(5));
 
-    const result = await searchCoupang("일반배송");
-    expect(result[0].prices[0].sellerName).toBe("쿠팡");
+    const result = await searchCoupang("케이스", { limit: 2 });
+    expect(result).toHaveLength(2);
   });
 
-  it("productData가 없으면 빈 배열", async () => {
-    stubFetch(() => okJson({ rCode: "0", data: {} }));
-    const result = await searchCoupang("결과없음");
-    expect(result).toEqual([]);
-  });
+  it("동일 쿼리 재검색은 캐시 사용 (렌더 1회)", async () => {
+    process.env.COUPANG_MODE = "browser";
+    renderMock.mockResolvedValue(fixture(1));
 
-  it("HTTP 오류 시 ScrapingError", async () => {
-    stubFetch(() => ({
-      ok: false,
-      status: 401,
-      statusText: "Unauthorized",
-      json: async () => ({}),
-    }));
-    await expect(searchCoupang("인증실패")).rejects.toBeInstanceOf(ScrapingError);
-  });
-
-  it("rCode가 '0'이 아니면 ScrapingError", async () => {
-    stubFetch(() => okJson({ rCode: "ERROR", rMessage: "잘못된 요청" }));
-    await expect(searchCoupang("에러코드")).rejects.toThrow(/잘못된 요청/);
-  });
-
-  it("동일 쿼리 재검색은 캐시 사용 (fetch 1회)", async () => {
-    const fetchMock = stubFetch(() =>
-      okJson({ rCode: "0", data: { productData: [] } })
-    );
-    await searchCoupang("캐시테스트");
-    await searchCoupang("캐시테스트");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await searchCoupang("동일쿼리");
+    await searchCoupang("동일쿼리");
+    expect(renderMock).toHaveBeenCalledTimes(1);
   });
 });
