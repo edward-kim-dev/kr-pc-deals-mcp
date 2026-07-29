@@ -3,14 +3,22 @@
  * kr-pc-deals-mcp — 한국 PC 부품 가격 비교 MCP 서버
  *
  * MCP(Model Context Protocol) 서버로, Claude 등 AI 어시스턴트가
- * 다나와/컴퓨존 가격 검색과 부품 호환성 체크를 수행할 수 있게 한다.
+ * 다나와/컴퓨존(+ 선택적 쿠팡) 가격 검색과 부품 호환성 체크를 수행할 수 있게 한다.
  *
  * 제공하는 도구:
  *   [검색] search_parts, get_product_detail, get_price_history
  *   [비교] compare_prices, find_lowest_price, list_by_category
  *   [빌드] build_add, build_remove, build_status, build_check_compatibility
- *   [시스템] proxy_status
+ *
+ * 환경변수:
+ *   COUPANG_ACCESS_KEY / COUPANG_SECRET_KEY (선택) — 쿠팡 파트너스 Open API 활성화
+ *   .env 파일이 있으면 자동 로드되지만, npx로 실행하는 일반적 경우에는
+ *   MCP 클라이언트 설정(claude_desktop_config.json 등)의 env 필드로 전달한다.
  */
+// dotenv는 .env 파일이 없거나 못 읽으면 조용히 무시한다.
+// 따라서 npx 환경에서는 무해하고, 로컬 개발 시에만 의미가 있다.
+import "dotenv/config";
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -21,14 +29,13 @@ import {
   getBuild, addPartToBuild, removePartFromBuild, checkBuildCompatibility,
 } from "./providers/danawa/index.js";
 import { searchCompuzone, getCompuzoneProductDetail } from "./providers/compuzone/index.js";
+import { searchCoupang, isCoupangAvailable } from "./providers/coupang/index.js";
 
 // 가격 비교 서비스
 import { comparePrices, findLowestPrice } from "./services/price-compare.js";
 
 // 유틸리티
 import { formatPrice } from "./utils/format.js";
-import { getProxyStatus } from "./utils/http.js";
-import { isZyteAvailable } from "./utils/zyte.js";
 import { ScrapingError } from "./core/errors.js";
 import type { PartCategory } from "./core/types.js";
 import { CATEGORY_LABELS } from "./core/types.js";
@@ -51,7 +58,7 @@ const PART_CATEGORIES = [
 
 const server = new McpServer({
   name: "kr-pc-deals-mcp",
-  version: "1.0.0",
+  version: "1.0.7",
 });
 
 // ─── 검색 도구 ───
@@ -59,11 +66,11 @@ const server = new McpServer({
 
 server.tool(
   "search_parts",
-  "PC 부품을 키워드로 검색합니다. 다나와, 컴퓨존 또는 양쪽 모두에서 검색할 수 있습니다.",
+  "PC 부품을 키워드로 검색합니다. 다나와, 컴퓨존, 쿠팡(키 설정 시) 또는 전체에서 검색할 수 있습니다.",
   {
     query: z.string().describe("검색 키워드 (예: 'RTX 4070 SUPER', 'i7-14700K')"),
     category: z.enum(PART_CATEGORIES).optional().describe("부품 카테고리 필터"),
-    source: z.enum(["danawa", "compuzone", "all"]).default("all").describe("검색 소스"),
+    source: z.enum(["danawa", "compuzone", "coupang", "all"]).default("all").describe("검색 소스"),
     limit: z.number().min(1).max(50).default(10).describe("결과 수 제한"),
   },
   async ({ query, category, source, limit }) => {
@@ -100,6 +107,35 @@ server.tool(
         }
       } catch (e) {
         errors.push(`컴퓨존: ${errorToText(e)}`);
+      }
+    }
+
+    if (source === "coupang" || source === "all") {
+      if (!isCoupangAvailable()) {
+        if (source === "coupang") {
+          return {
+            content: [{
+              type: "text" as const,
+              text: "ℹ️ 쿠팡 검색을 사용하려면 COUPANG_ACCESS_KEY와 COUPANG_SECRET_KEY 환경변수를 설정하세요. (https://partners.coupang.com)",
+            }],
+          };
+        }
+        // source === "all"인 경우 쿠팡은 조용히 스킵
+      } else {
+        try {
+          const coupangProducts = await searchCoupang(query, { category: category as PartCategory, limit });
+          for (const p of coupangProducts) {
+            const sellerLabel = p.prices[0]?.sellerName ?? "쿠팡";
+            results.push({
+              source: sellerLabel,
+              name: p.name,
+              price: p.lowestPrice > 0 ? formatPrice(p.lowestPrice) : "가격 미정",
+              url: p.productUrl,
+            });
+          }
+        } catch (e) {
+          errors.push(`쿠팡: ${errorToText(e)}`);
+        }
       }
     }
 
@@ -202,9 +238,15 @@ server.tool(
 // ─── 가격 비교 도구 ───
 // 다나와와 컴퓨존 간 동일 제품의 가격을 비교하고 최저가를 찾는다.
 
+const SOURCE_LABELS: Record<string, string> = {
+  danawa: "다나와",
+  compuzone: "컴퓨존",
+  coupang: "쿠팡",
+};
+
 server.tool(
   "compare_prices",
-  "동일 제품의 다나와/컴퓨존 간 가격을 비교합니다.",
+  "동일 제품의 다나와/컴퓨존/쿠팡(키 설정 시) 간 가격을 비교합니다.",
   {
     query: z.string().describe("검색 키워드"),
     category: z.enum(PART_CATEGORIES).optional().describe("부품 카테고리"),
@@ -214,17 +256,31 @@ server.tool(
 
     const lines: string[] = [];
     lines.push(`🔍 "${query}" 가격 비교 결과\n`);
-    lines.push(`다나와: ${result.danawa.length}건 / 컴퓨존: ${result.compuzone.length}건\n`);
+    const summary = [
+      `다나와 ${result.danawa.length}건`,
+      `컴퓨존 ${result.compuzone.length}건`,
+    ];
+    if (isCoupangAvailable()) {
+      summary.push(`쿠팡 ${result.coupang.length}건`);
+    }
+    lines.push(summary.join(" / ") + "\n");
 
     if (result.matched.length > 0) {
       lines.push(`【매칭된 제품 비교】`);
       for (const m of result.matched) {
-        lines.push(
-          `\n• ${m.danawa.name}` +
-          `\n  다나와: ${formatPrice(m.danawa.lowestPrice)}` +
-          `\n  컴퓨존: ${formatPrice(m.compuzone.lowestPrice)}` +
-          `\n  → ${m.cheaperSource === "danawa" ? "다나와" : "컴퓨존"}가 ${formatPrice(m.priceDiff)} 저렴`
+        const block = [`\n• ${m.danawa.name}`];
+        block.push(`  다나와: ${formatPrice(m.danawa.lowestPrice)}`);
+        if (m.compuzone) {
+          block.push(`  컴퓨존: ${formatPrice(m.compuzone.lowestPrice)}`);
+        }
+        if (m.coupang) {
+          const sellerLabel = m.coupang.prices[0]?.sellerName ?? "쿠팡";
+          block.push(`  ${sellerLabel}: ${formatPrice(m.coupang.lowestPrice)}`);
+        }
+        block.push(
+          `  → ${SOURCE_LABELS[m.cheaperSource] ?? m.cheaperSource} 최저 (${formatPrice(m.priceDiff)} 차이)`
         );
+        lines.push(block.join("\n"));
       }
     } else {
       lines.push("동일 제품 매칭 결과가 없습니다. 각 사이트 결과를 개별 확인해주세요.");
@@ -236,7 +292,7 @@ server.tool(
 
 server.tool(
   "find_lowest_price",
-  "특정 부품의 다나와/컴퓨존 통합 최저가를 찾습니다.",
+  "특정 부품의 다나와/컴퓨존/쿠팡(키 설정 시) 통합 최저가를 찾습니다.",
   {
     query: z.string().describe("검색 키워드"),
     category: z.enum(PART_CATEGORIES).optional().describe("부품 카테고리"),
@@ -248,7 +304,7 @@ server.tool(
       return { content: [{ type: "text" as const, text: `"${query}" 검색 결과가 없습니다.` }] };
     }
 
-    const sourceName = cheapest.source === "danawa" ? "다나와" : "컴퓨존";
+    const sourceName = SOURCE_LABELS[cheapest.source] ?? cheapest.source;
     return {
       content: [{
         type: "text" as const,
@@ -484,50 +540,13 @@ server.tool(
   }
 );
 
-// ─── 시스템 도구 ───
-// 프록시 상태 확인, 디버깅용
-
-server.tool(
-  "proxy_status",
-  "현재 프록시/차단 상태를 확인합니다. Zyte API 키 설정 여부, 사이트별 차단 상태, 자동 프록시 전환 여부를 보여줍니다.",
-  {},
-  async () => {
-    const zyteAvailable = isZyteAvailable();
-    const status = getProxyStatus();
-
-    const lines: string[] = [];
-    lines.push(`🌐 프록시 상태\n`);
-    lines.push(`Zyte API: ${zyteAvailable ? "✅ 활성화 (API 키 설정됨)" : "❌ 비활성화 (ZYTE_API_KEY 미설정)"}`);
-    lines.push("");
-
-    for (const [source, info] of Object.entries(status)) {
-      const statusIcon = info.blocked ? "🔴" : info.zyteActive ? "🟡" : "🟢";
-      lines.push(
-        `${statusIcon} ${source}: ` +
-        `${info.blocked ? "차단됨" : "정상"} | ` +
-        `Zyte 모드: ${info.zyteActive ? "ON" : "OFF"} | ` +
-        `연속 실패: ${info.failCount}회`
-      );
-    }
-
-    if (!zyteAvailable) {
-      lines.push("");
-      lines.push("💡 Tip: ZYTE_API_KEY 환경변수를 설정하면 차단 시 자동으로 Zyte 프록시를 경유합니다.");
-      lines.push("   → https://www.zyte.com 에서 API 키를 발급받을 수 있습니다.");
-    }
-
-    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
-  }
-);
-
 // ─── 서버 시작 ───
 // stdio 전송 방식: Claude Desktop, MCP Inspector 등에서 stdin/stdout으로 통신
 
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  const zyteStatus = isZyteAvailable() ? "Zyte 프록시 활성화" : "Zyte 미설정 (직접 요청만 사용)";
-  console.error(`kr-pc-deals-mcp 서버가 시작되었습니다. [${zyteStatus}]`);
+  console.error("kr-pc-deals-mcp 서버가 시작되었습니다.");
 }
 
 main().catch((error) => {

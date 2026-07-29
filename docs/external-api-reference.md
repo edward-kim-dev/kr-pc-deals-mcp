@@ -260,49 +260,6 @@ GET https://www.compuzone.co.kr/product/product_detail.htm
 
 ---
 
-## Zyte 프록시 (선택적)
-
-직접 요청이 차단(429/403)될 때 자동으로 전환되는 프록시 서비스.
-
-`ZYTE_API_KEY` 환경변수가 설정된 경우에만 활성화.
-
-```
-POST https://api.zyte.com/v1/extract
-```
-
-**인증**: HTTP Basic Auth (`{apiKey}:` Base64 인코딩)
-
-**요청 본문:**
-```json
-{
-  "url": "대상 URL",
-  "httpResponseBody": true,
-  "browserHtml": false
-}
-```
-
-| 필드 | 설명 |
-|---|---|
-| `httpResponseBody` | Base64 인코딩된 응답 바디 반환 |
-| `httpResponseHeaders` | 응답 헤더 반환 |
-| `browserHtml` | JS 렌더링된 HTML 반환 (비용 높음) |
-| `httpRequestMethod` | HTTP 메서드 지정 |
-| `httpRequestText` | 요청 바디 |
-| `customHttpRequestHeaders` | 커스텀 헤더 배열 |
-
-**응답:**
-```json
-{
-  "url": "string",
-  "statusCode": 200,
-  "httpResponseBody": "Base64 인코딩된 바디",
-  "httpResponseHeaders": [{ "name": "string", "value": ["string"] }],
-  "browserHtml": "렌더링된 HTML"
-}
-```
-
----
-
 ## HTTP 클라이언트 설정
 
 ### 동시성 제어
@@ -326,4 +283,3 @@ POST https://api.zyte.com/v1/extract
 - **재시도**: HTML 요청 최대 2회, JSON 요청 재시도 없음
 - **백오프**: 1s → 2s → 4s (최대 10s)
 - **차단 감지**: 429/403 응답 시 지수 백오프 (30s → 60s → 120s, 최대 5분)
-- **Zyte 전환**: 직접 요청 3회 연속 실패 시 자동으로 Zyte 프록시 모드 전환

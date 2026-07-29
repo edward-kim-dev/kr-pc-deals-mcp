@@ -24,11 +24,12 @@ Claude, ChatGPT, Cursor 등 MCP를 지원하는 모든 AI 앱에서 사용할 �
 - **가격 이력** — 다나와 가격 변동 추적 (1/3/6/12개월)
 - **빌드 견적** — 부품을 하나씩 추가하며 견적 구성, 합계 자동 계산
 - **호환성 체크** — 다나와 가상견적 API 기반 CPU-메인보드-RAM 호환성 자동 검증
-- **프록시 지원** — 차단 시 Zyte 프록시 자동 폴백
 
 ---
 
 ## 빠른 시작
+
+다나와/컴퓨존만 사용하려면 아래 설정으로 충분합니다. 쿠팡 데이터까지 활용하려면 [쿠팡 활성화](#쿠팡-활성화-선택) 섹션을 참고하세요.
 
 ### Claude Desktop
 
@@ -65,6 +66,43 @@ claude mcp add kr-pc-deals-mcp npx -- -y kr-pc-deals-mcp
   }
 }
 ```
+
+---
+
+## 쿠팡 활성화 (선택)
+
+쿠팡 가격까지 비교에 포함하려면 쿠팡 파트너스 Open API 키가 필요합니다.
+
+1. [쿠팡 파트너스](https://partners.coupang.com)에 가입하고 Open API 키를 발급받습니다.
+2. MCP 클라이언트 설정의 `env` 필드에 키를 넣습니다.
+
+### Claude Desktop / Cursor
+
+```json
+{
+  "mcpServers": {
+    "kr-pc-deals-mcp": {
+      "command": "npx",
+      "args": ["-y", "kr-pc-deals-mcp"],
+      "env": {
+        "COUPANG_ACCESS_KEY": "발급받은_access_key",
+        "COUPANG_SECRET_KEY": "발급받은_secret_key"
+      }
+    }
+  }
+}
+```
+
+### Claude Code
+
+```bash
+claude mcp add kr-pc-deals-mcp \
+  -e COUPANG_ACCESS_KEY=발급받은_access_key \
+  -e COUPANG_SECRET_KEY=발급받은_secret_key \
+  npx -- -y kr-pc-deals-mcp
+```
+
+> 두 키가 **모두** 설정되어야 쿠팡 검색이 활성화됩니다. 하나만 있으면 비활성 상태로 동작합니다.
 
 ---
 
@@ -110,18 +148,23 @@ npm test
 
 ## 환경 변수
 
-`.env.example`을 `.env`로 복사하여 설정합니다.
+기본 사용에는 환경변수가 필요 없습니다. 다나와/컴퓨존은 키 없이 동작합니다.
 
-```bash
-cp .env.example .env
-```
+선택적으로 사용할 수 있는 환경변수:
 
 | 변수 | 설명 | 기본값 |
 |------|------|--------|
-| `ZYTE_API_KEY` | Zyte 프록시 API 키 (차단 시 자동 우회) | 미설정 (직접 요청만) |
+| `COUPANG_ACCESS_KEY` | 쿠팡 파트너스 Open API access key | 미설정 (쿠팡 데이터 비활성) |
+| `COUPANG_SECRET_KEY` | 쿠팡 파트너스 Open API secret key | 미설정 (쿠팡 데이터 비활성) |
 
-> Zyte 없이도 정상 동작합니다. 다나와/컴퓨존에서 반복 요청으로 차단될 때만 필요합니다.
-> https://www.zyte.com 에서 무료 체험 API 키를 발급받을 수 있습니다.
+### 환경변수 전달 방법
+
+| 실행 방식 | 전달 방법 |
+|---|---|
+| **npx (Claude Desktop/Code/Cursor 등 MCP 클라이언트)** | 클라이언트 설정 파일의 `env` 필드에 직접 입력 — [쿠팡 활성화](#쿠팡-활성화-선택) 참고 |
+| **로컬 개발 (`git clone` 후 `npm run dev`)** | 프로젝트 루트에 `.env` 파일 생성 (`cp .env.example .env`) |
+
+> `.env` 파일은 로컬 개발 시에만 자동 로드됩니다. npx로 실행되는 MCP 서버는 `.env`를 찾을 수 없으므로, 반드시 MCP 클라이언트 설정의 `env` 필드를 사용하세요.
 
 ---
 
@@ -156,7 +199,7 @@ Claude나 Cursor에서 아래처럼 자연어로 질문하면 됩니다:
 
 | 도구 | 설명 |
 |------|------|
-| `search_parts` | PC 부품 키워드 검색 (다나와/컴퓨존/전체) |
+| `search_parts` | PC 부품 키워드 검색 (다나와/컴퓨존/쿠팡/전체) |
 | `get_product_detail` | 상품 상세 정보 (스펙, 판매처별 가격) |
 | `get_price_history` | 가격 변동 이력 (1/3/6/12개월) |
 
@@ -164,7 +207,7 @@ Claude나 Cursor에서 아래처럼 자연어로 질문하면 됩니다:
 
 | 도구 | 설명 |
 |------|------|
-| `compare_prices` | 다나와↔컴퓨존 동일 제품 가격 비교 |
+| `compare_prices` | 다나와/컴퓨존/쿠팡 동일 제품 가격 비교 |
 | `find_lowest_price` | 통합 최저가 검색 |
 | `list_by_category` | 카테고리별 인기/최저가 목록 |
 
@@ -176,12 +219,6 @@ Claude나 Cursor에서 아래처럼 자연어로 질문하면 됩니다:
 | `build_remove` | 빌드에서 부품 제거 |
 | `build_status` | 현재 빌드 상태 조회 |
 | `build_check_compatibility` | 다나와 API 기반 부품 간 호환성 체크 |
-
-### 시스템
-
-| 도구 | 설명 |
-|------|------|
-| `proxy_status` | 프록시/차단 상태 확인 |
 
 ### 지원 카테고리
 
@@ -197,8 +234,8 @@ CPU, 그래픽카드, 메인보드, RAM, SSD, HDD, 파워서플라이, 케이스
 kr-pc-deals-mcp Server
   ├── 다나와 Provider (검색, 상세, 가격이력, 가상견적, 호환성 API)
   ├── 컴퓨존 Provider (검색, 상세)
-  ├── 가격 비교 Service (크로스사이트 매칭)
-  └── Zyte Proxy (차단 시 자동 폴백)
+  ├── 쿠팡 Provider (선택, 파트너스 Open API)
+  └── 가격 비교 Service (크로스사이트 매칭)
 ```
 
 ### 차단 방지 메커니즘
@@ -208,7 +245,6 @@ kr-pc-deals-mcp Server
 | 사이트별 동시성 제어 | 다나와 최대 3건/500ms, 컴퓨존 최대 2건/1,000ms |
 | 인메모리 캐시 | 동일 검색 결과 재사용 |
 | 지수 백오프 | 차단 시 30초 → 60초 → 120초 → 최대 5분 |
-| Zyte 자동 폴백 | 3회 연속 실패 시 프록시 모드 전환 |
 
 ---
 

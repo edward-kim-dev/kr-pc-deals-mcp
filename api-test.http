@@ -1,0 +1,157 @@
+### ============================================================
+### kr-pc-deals REST API - REST Client 테스트 파일
+### GPTs Actions용 REST API 엔드포인트 테스트
+### ============================================================
+
+@baseUrl = http://localhost:3000
+
+### ─── 검색 (Search) ─────────────────────────────────────────
+
+### 부품 키워드 검색 (양쪽 사이트)
+GET {{baseUrl}}/api/search?keyword=RTX 4070 SUPER&site=both&limit=10
+
+### 부품 키워드 검색 (다나와만)
+GET {{baseUrl}}/api/search?keyword=i7-14700K&site=danawa&limit=5
+
+### 부품 키워드 검색 (컴퓨존만)
+GET {{baseUrl}}/api/search?keyword=라이젠 7800X3D&site=compuzone&limit=5
+
+### 카테고리 필터 포함 검색
+GET {{baseUrl}}/api/search?keyword=DDR5&site=both&category=ram&limit=10
+
+### ─── 제품 상세 (Product Detail) ────────────────────────────
+
+### 다나와 제품 상세 조회 (제품 코드는 검색 결과에서 획득)
+GET {{baseUrl}}/api/product/12345678?site=danawa
+
+### 컴퓨존 제품 상세 조회
+GET {{baseUrl}}/api/product/ABCD1234?site=compuzone
+
+### ─── 가격 비교 (Compare) ───────────────────────────────────
+
+### 다나와 vs 컴퓨존 가격 비교
+GET {{baseUrl}}/api/compare?keyword=RTX 4070 SUPER
+
+### 카테고리 지정 가격 비교
+GET {{baseUrl}}/api/compare?keyword=i7-14700K&category=cpu
+
+### ─── 최저가 검색 (Lowest Price) ────────────────────────────
+
+### 통합 최저가 검색
+GET {{baseUrl}}/api/lowest?keyword=RTX 4070 SUPER
+
+### 카테고리 지정 최저가
+GET {{baseUrl}}/api/lowest?keyword=삼성 990 PRO&category=ssd
+
+### ─── 카테고리별 목록 (Category List) ───────────────────────
+
+### CPU 인기순
+GET {{baseUrl}}/api/category?id=cpu&sort=popularity&limit=10
+
+### GPU 최저가순
+GET {{baseUrl}}/api/category?id=gpu&sort=price&limit=10
+
+### RAM 인기순
+GET {{baseUrl}}/api/category?id=ram&sort=popularity&limit=5
+
+### SSD 최저가순
+GET {{baseUrl}}/api/category?id=ssd&sort=price&limit=10
+
+### ─── 가격 추이 (Price History) ─────────────────────────────
+
+### 최근 1개월 가격 추이
+GET {{baseUrl}}/api/price-history?productId=12345678&period=1
+
+### 최근 3개월 가격 추이
+GET {{baseUrl}}/api/price-history?productId=12345678&period=3
+
+### 최근 6개월 가격 추이
+GET {{baseUrl}}/api/price-history?productId=12345678&period=6
+
+### 최근 12개월 가격 추이
+GET {{baseUrl}}/api/price-history?productId=12345678&period=12
+
+### ─── 빌드/견적 (Build) ─────────────────────────────────────
+
+### 현재 빌드 상태 조회
+GET {{baseUrl}}/api/build/status
+
+### 빌드에 CPU 추가
+POST {{baseUrl}}/api/build/add
+Content-Type: application/json
+
+{
+  "productId": "22052289",
+  "category": "cpu",
+  "name": "인텔 코어 i7-14700K",
+  "price": 489000
+}
+
+### 빌드에 메인보드 추가
+POST {{baseUrl}}/api/build/add
+Content-Type: application/json
+
+{
+  "productId": "21688498",
+  "category": "motherboard",
+  "name": "ASUS ROG STRIX Z790-A GAMING WIFI",
+  "price": 359000
+}
+
+### 빌드에 RAM 추가
+POST {{baseUrl}}/api/build/add
+Content-Type: application/json
+
+{
+  "productId": "20712498",
+  "category": "ram",
+  "name": "삼성 DDR5-5600 32GB (16GBx2)",
+  "price": 129000
+}
+
+### 빌드에 GPU 추가
+POST {{baseUrl}}/api/build/add
+Content-Type: application/json
+
+{
+  "productId": "21939825",
+  "category": "gpu",
+  "name": "NVIDIA GeForce RTX 4070 SUPER",
+  "price": 789000
+}
+
+### 빌드에 SSD 추가
+POST {{baseUrl}}/api/build/add
+Content-Type: application/json
+
+{
+  "productId": "18498553",
+  "category": "ssd",
+  "name": "삼성 990 PRO 2TB",
+  "price": 219000
+}
+
+### 빌드에 PSU 추가
+POST {{baseUrl}}/api/build/add
+Content-Type: application/json
+
+{
+  "productId": "19876543",
+  "category": "psu",
+  "name": "시소닉 FOCUS GX-850 GOLD",
+  "price": 159000
+}
+
+### 빌드 호환성 체크
+POST {{baseUrl}}/api/build/check
+
+### 빌드에서 GPU 제거
+DELETE {{baseUrl}}/api/build/remove/gpu
+
+### ─── 시스템 (System) ───────────────────────────────────────
+
+### 프록시/차단 상태 확인
+GET {{baseUrl}}/api/proxy/status
+
+### 헬스 체크
+GET {{baseUrl}}/api/health

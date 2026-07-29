@@ -16,7 +16,7 @@ export type PartCategory =
   | "monitor";
 
 /** 데이터 출처 (어느 사이트에서 가져온 정보인지) */
-export type Source = "danawa" | "compuzone";
+export type Source = "danawa" | "compuzone" | "coupang";
 
 /** 판매처별 가격 정보 (다나와 제품 상세에서 추출) */
 export interface SellerPrice {
@@ -55,16 +55,18 @@ export interface PriceHistory {
   data: PriceHistoryEntry[];   // 일별 가격 데이터
 }
 
-/** 다나와/컴퓨존 가격 비교 결과 */
+/** 다나와/컴퓨존/쿠팡 가격 비교 결과 */
 export interface ComparisonResult {
   query: string;
   danawa: Product[];
   compuzone: Product[];
+  coupang: Product[];           // 쿠팡 파트너스 키 미설정 시 빈 배열
   matched: {
     danawa: Product;
-    compuzone: Product;
-    priceDiff: number;        // 가격 차이 (원)
-    cheaperSource: Source;    // 더 저렴한 사이트
+    compuzone?: Product;
+    coupang?: Product;
+    priceDiff: number;          // 최대-최소 가격 차이 (원)
+    cheaperSource: Source;      // 최저가 사이트
   }[];
 }
 
