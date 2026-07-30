@@ -10,7 +10,27 @@ export const COUPANG_SOURCE = "coupang-browser";
 
 const SEARCH_URL = "https://www.coupang.com/np/search";
 const NAVIGATION_TIMEOUT_MS = 30_000;
-const PRODUCT_WAIT_TIMEOUT_MS = 15_000;
+// 상품 목록 대기 시간. 정상 페이지는 수 초 내 상품이 뜨므로, 봇 차단(상품 미로드)에서
+// 불필요하게 오래 기다리지 않도록 짧게 잡는다.
+const PRODUCT_WAIT_TIMEOUT_MS = 8_000;
+// 봇 차단(빈 인터스티셜) 판정용 body 텍스트 길이 하한. 정상 페이지는 사이트 크롬만으로도
+// 수백 자 이상이며, Akamai 챌린지 페이지는 사실상 비어 있다.
+const MIN_BODY_TEXT_LENGTH = 50;
+
+/** title 기반 봇 차단(Access Denied/캡차/보안확인) 감지. */
+function isChallengeTitle(title: string): boolean {
+  return /access denied|captcha|보안\s*확인|blocked/i.test(title);
+}
+
+/** 봇 차단을 백오프로 기록하고 즉시 실패시킨다. */
+function throwCoupangBlocked(): never {
+  markBlocked(COUPANG_SOURCE, 429);
+  throw new ScrapingError(
+    "coupang",
+    "쿠팡이 봇 차단(보안 확인)으로 검색 결과를 반환하지 않았습니다. 잠시 후 다시 시도해주세요.",
+    429
+  );
+}
 
 let browserPromise: Promise<Browser> | null = null;
 let browserUserAgentPromise: Promise<string> | null = null;
@@ -177,21 +197,32 @@ export async function renderCoupangSearchPage(query: string): Promise<string> {
         );
       }
 
-      await page
+      // (1) 조기 판정: domcontentloaded 직후 title이 준비되므로, 명백한 차단(Access Denied 등)은
+      //     8초 상품 대기 없이 즉시 실패시킨다.
+      if (isChallengeTitle(await page.title().catch(() => ""))) {
+        throwCoupangBlocked();
+      }
+
+      // (2) 상품 목록이 뜨면 즉시 통과, 안 뜨면 짧은 타임아웃까지 대기한다.
+      const productAppeared = await page
         .waitForSelector('a[href*="/vp/products/"]', {
           timeout: PRODUCT_WAIT_TIMEOUT_MS,
         })
-        .catch(() => undefined);
+        .then(() => true)
+        .catch(() => false);
 
-      const title = await page.title();
-      if (/access denied|captcha|보안 확인/i.test(title)) {
-        // 봇 감지(캡차/보안확인)도 차단으로 취급해 백오프한다.
-        markBlocked(COUPANG_SOURCE, 429);
-        throw new ScrapingError(
-          "coupang",
-          "쿠팡에서 추가 확인을 요구해 검색 결과를 가져오지 못했습니다.",
-          429
-        );
+      // (3) 상품이 하나도 없으면 '봇 차단(빈 인터스티셜)'인지 '정상 무결과'인지 구분한다.
+      //     Akamai 챌린지는 HTTP 200이지만 title/body가 사실상 비어 있어(진단 시 title="", body 0),
+      //     title 정규식과 빈 body를 함께 신호로 사용한다. 정상 무결과 페이지는 사이트 크롬으로 body가 충분히 길다.
+      if (!productAppeared) {
+        const title = await page.title().catch(() => "");
+        const bodyLength = await page
+          .evaluate(() => (document.body?.innerText ?? "").trim().length)
+          .catch(() => 0);
+        if (isChallengeTitle(title) || bodyLength < MIN_BODY_TEXT_LENGTH) {
+          throwCoupangBlocked();
+        }
+        // 그 외는 정상적인 '검색 결과 없음' → 아래에서 빈 결과로 파싱된다.
       }
 
       const html = await page.content();
