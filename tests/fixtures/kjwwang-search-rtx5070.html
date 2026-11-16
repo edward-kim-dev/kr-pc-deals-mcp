@@ -1,0 +1,159 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=euc-kr">
+<title>견적왕</title>
+</head>
+<body>
+<form name="main_search" method="post" action="/shop/product_search.html" target="_parent">
+                						<input type="text" name="main_search" class="input" value="RTX 5070"/>
+                						<a href="javascript:document.main_search.submit()" class="search_btn"></a>
+                					</form>
+<script type="text/javascript">
+	$(function(){		
+		$(".opt").click(function(){
+			$("[id=search_cate]").filter(".on").each(function(obj){
+				$(this).removeClass("on");
+			});
+			$(this).addClass("on");
+			searchListAjax();
+			return false;
+		});
+
+		$(".more_btn").click(function(){
+			var src = $(this).find("img").attr("src");
+			var more_view = $(this).parent().next().find(".opt_more");
+			var temp = "";
+			if(more_view.length > 0){
+				if(more_view.is(":visible")){
+					more_view.slideUp();
+					temp = src.replace("close","open");
+				}else{
+					more_view.slideDown();
+					temp = src.replace("open","close");
+				}
+				$(this).find("img").attr("src",temp)
+			}
+			return false;
+		});
+		
+		$(".nav .curr").hover(function(){
+			$(this).find(".nav_sub").show();
+		},function(){
+			$(this).find(".nav_sub").hide();
+		});
+	
+		//엔터 이벤트
+		var arr = new Array("#search", "#search1","#eprice"); 
+		for (var i=0;i<arr.length;i++){
+			$(arr[i]).keydown(function(key) {
+				if (key.keyCode == 13) searchListAjax();
+			});
+		}
+		$("#sprice").keydown(function(key) {
+			if (key.keyCode == 13) {				
+				$("#eprice").focus();
+				return true;
+			}
+		});
+
+		searchListAjax();
+	});
+
+	function searchListAjax(){
+		var search_cate= "";
+		$("[id=search_cate]").filter(".on").each(function(obj){
+			search_cate = $(this).attr("nodeValue");
+		});
+			
+		var url = '/skin/shop/basic/product_list_include_plist.php';		var r = Math.random()*1000000;		
+		loading_layer(true);
+		$.ajax({
+			type:"POST",
+			url: url,	
+			data:{
+				sort : sort,
+				action : "pc_estimate_keyword",
+				search_word : "RTX 5070",
+				search1 : $("#search1").val(),
+				search_query : $("#search_query").val(),
+				search_cate : search_cate,
+				sprice  : $("#sprice").val(),
+				eprice  : $("#eprice").val(),
+				page    : $("#page").val(),
+				list_sort_type : $("#list_sort_type").val(),
+				view_type : $("#view_type").val(),
+				timeid : r
+			},
+			success: function(html){
+				$("#product_list").html(html);			
+				// 견적서 탭일시
+				if($(".pc_estimate").length == 1){
+					if($(".product > li").length < 30){
+						$(".detail_more").removeClass("on");
+					}
+					kings_score_graph();
+				}
+				$("#filterArea").find(".cnt").html($("#total_num").val());										
+				loading_layer(false);
+			} 
+		});
+	}
+	
+	function pageReplace(order){
+		$("#page").val(1);
+		$("#list_sort_type").val(order);
+		searchListAjax();
+	}
+
+	function pageMove(num){
+		$("#page").val(num);
+		searchListAjax();
+	}
+
+	function chViewType(viewType){
+		$("#view_type").val(viewType);		
+		searchListAjax();
+	}
+
+	function searchTab(val){
+		document.myform.search_tab.value = val;
+		document.myform.submit();
+	}
+
+
+// ----------------
+// 견적서 검색용
+// ----------------
+	var sort = ['','','','X'];		
+	function search_list_sort(i,name,val){
+		sort[i] = val;	
+		searchListAjax();
+	}
+</script>
+<!-- 페이징 및 검색 관련 히든값 -->		
+<input type="hidden" id="search_query" value="104c2b4a89f0988e5edee41fe2ee5539988f1245fc7926690326fbcd6fe7259641aac1fe40e4bac5deac47927213589b42dfe922a495bb83663cc9be2da7445a62a700425e7d9f3ad94419b2bed58454ddf0ab7c9adcdfa27e68a730fba7d8f2a2ce287131eefaf8ddbf325f2058392702c21096d850f193b686f9bf46f10c70bba9a31e5b161c77650d975513239d10a2fb8de76f48f00fd8956494165bb38515d5e6977cba2a1b615071f5b94fd1f326fb237f715256b4cfb51d9f361043c5bcf054b9774a6239284049a16104f40ce16cb65866e355625d98b2aa05d57700e95760b41e08b183f228f2efc67f7f7057c7702d9f59a81683c8aa50463a8037d9b122e3953bb091b54a848a6632b1934a54095d80dc382ea381d01ef43389e1b3090d3e829f245a8f0a1c136f886cb50f914bf89b02bd152d64baf02413589c656b77065d8bd88b641fa7f1d98dd53ee901592c48151dfa9f7990014dc62e58ca9ba30abdea462ceff3a11e84f6b87fec2ab7aeab4e3d5f5c73a47faa4335159f45121bf9dbee2d8778f144082577a85f3630f2d776c90902d9a74addef9ed983b1b9ca912a2c4ed13f156689cac72214015823c6210eface233fc306b3f796a1d02cebf83a40c153e7b5d83c69319be09a64d4497060c974894879cd1d45d182b2644e87e1e5ea449404bd9e1ad647ada7702d3008eb6a0d9ae437f87fedae">
+<input type="hidden" id="page" name="page" value="1">
+<input type="hidden" id="list_sort_type" name="list_sort_type" value="">
+<input type="hidden" id="view_type" name="view_type" value="">
+<!-- 페이징 및 검색 관련 히든값 -->
+<div class="prd_search">
+				<div class="select clear">
+					<ul>	<!-- 검색 결과에 따라서 순서가 변경된다.최대 6개만 나온다. (단품,PC,이벤트,후기,기획전,할인등등) -->
+						<form name="myform" method="post" action="/shop/product_search.html">
+							<input type='hidden' name='main_search' value='RTX 5070'>
+							<input type='hidden' name='search_tab' value=''>
+						<li><a href='#' onclick='searchTab("부품"); return false;' class='basic on'>부품(49)</a></li><li><a href='#' onclick='searchTab("견적서"); return false;' class='basic'>견적서(1060)</a></li>						</form>
+</ul></div>
+<dl class="search_basic">
+<dt><span>카테고리</span></dt>
+							<dd>
+								<div class="opt_all clear">
+									<ul>
+										<li><a href='#' id='search_cate' class='opt on' nodeValue='0'>전체보기 (49)</a></li><li><a href='#' id='search_cate' class='opt' nodeValue='12'>그래픽카드 (46)</a></li><li><a href='#' id='search_cate' class='opt' nodeValue='6087'>미니PC/베어본 (3)</a></li>									</ul>
+								</div>
+							</dd>
+</dl>
+</div>
+<div class="prd_list"><div class="prd_contents" id="product_list"></div></div>
+</body>
+</html>

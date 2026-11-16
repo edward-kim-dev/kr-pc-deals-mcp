@@ -27,7 +27,7 @@ describe("ConcurrencyLimiter — 분당·일일 요청 상한", () => {
     const err = await lim.run(async () => 1).catch((e) => e);
     expect(err).toBeInstanceOf(ScrapingError);
     expect(err.statusCode).toBe(429);
-    expect(err.message).toContain("일일");
+    expect(err.message).toContain("하루");
   });
 
   it("분당 창이 지나면 카운터가 리셋된다 (슬라이딩 윈도우)", async () => {

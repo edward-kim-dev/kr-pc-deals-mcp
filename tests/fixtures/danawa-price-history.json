@@ -1,0 +1,273 @@
+{
+ "1": {
+  "count": 4,
+  "result": [
+   {
+    "Fulldate": "26-10-20",
+    "date": "10-20",
+    "minPrice": 1291680
+   },
+   {
+    "Fulldate": "26-10-27",
+    "date": "10-27",
+    "minPrice": 645220
+   },
+   {
+    "Fulldate": "26-11-03",
+    "date": "11-03",
+    "minPrice": 1066990
+   },
+   {
+    "Fulldate": "26-11-10",
+    "date": "11-10",
+    "minPrice": 1355520
+   }
+  ],
+  "maxPrice": "1355520",
+  "minPrice": "645220"
+ },
+ "3": {
+  "count": 12,
+  "result": [
+   {
+    "Fulldate": "26-08-25",
+    "date": "08-25",
+    "minPrice": 1208410
+   },
+   {
+    "Fulldate": "26-09-01",
+    "date": "09-01",
+    "minPrice": 773130
+   },
+   {
+    "Fulldate": "26-09-08",
+    "date": "09-08",
+    "minPrice": 1278020
+   },
+   {
+    "Fulldate": "26-09-15",
+    "date": "09-15",
+    "minPrice": 1268990
+   },
+   {
+    "Fulldate": "26-09-22",
+    "date": "09-22",
+    "minPrice": 1268450
+   },
+   {
+    "Fulldate": "26-09-29",
+    "date": "09-29",
+    "minPrice": 1249460
+   },
+   {
+    "Fulldate": "26-10-06",
+    "date": "10-06",
+    "minPrice": 1289630
+   },
+   {
+    "Fulldate": "26-10-13",
+    "date": "10-13",
+    "minPrice": 1289630
+   },
+   {
+    "Fulldate": "26-10-20",
+    "date": "10-20",
+    "minPrice": 1291680
+   },
+   {
+    "Fulldate": "26-10-27",
+    "date": "10-27",
+    "minPrice": 645220
+   },
+   {
+    "Fulldate": "26-11-03",
+    "date": "11-03",
+    "minPrice": 1066990
+   },
+   {
+    "Fulldate": "26-11-10",
+    "date": "11-10",
+    "minPrice": 1355520
+   }
+  ],
+  "maxPrice": "1355520",
+  "minPrice": "645220"
+ },
+ "6": {
+  "count": 6,
+  "result": [
+   {
+    "date": "26-06",
+    "minPrice": 944390
+   },
+   {
+    "date": "26-07",
+    "minPrice": 998370
+   },
+   {
+    "date": "26-08",
+    "minPrice": 840600
+   },
+   {
+    "date": "26-09",
+    "minPrice": 773130
+   },
+   {
+    "date": "26-10",
+    "minPrice": 645220
+   },
+   {
+    "date": "26-11",
+    "minPrice": 1066990
+   }
+  ],
+  "maxPrice": 1066990,
+  "minPrice": 645220
+ },
+ "12": {
+  "count": 12,
+  "result": [
+   {
+    "date": "25-12",
+    "minPrice": 868390
+   },
+   {
+    "date": "26-01",
+    "minPrice": 889900
+   },
+   {
+    "date": "26-02",
+    "minPrice": 1104760
+   },
+   {
+    "date": "26-03",
+    "minPrice": 1018890
+   },
+   {
+    "date": "26-04",
+    "minPrice": 1018890
+   },
+   {
+    "date": "26-05",
+    "minPrice": 935300
+   },
+   {
+    "date": "26-06",
+    "minPrice": 944390
+   },
+   {
+    "date": "26-07",
+    "minPrice": 998370
+   },
+   {
+    "date": "26-08",
+    "minPrice": 840600
+   },
+   {
+    "date": "26-09",
+    "minPrice": 773130
+   },
+   {
+    "date": "26-10",
+    "minPrice": 645220
+   },
+   {
+    "date": "26-11",
+    "minPrice": 1066990
+   }
+  ],
+  "maxPrice": 1104760,
+  "minPrice": 645220
+ },
+ "24": {
+  "count": 21,
+  "result": [
+   {
+    "date": "25-03",
+    "minPrice": 1010990
+   },
+   {
+    "date": "25-04",
+    "minPrice": 932580
+   },
+   {
+    "date": "25-05",
+    "minPrice": 916460
+   },
+   {
+    "date": "25-06",
+    "minPrice": 880740
+   },
+   {
+    "date": "25-07",
+    "minPrice": 870470
+   },
+   {
+    "date": "25-08",
+    "minPrice": 838940
+   },
+   {
+    "date": "25-09",
+    "minPrice": 829480
+   },
+   {
+    "date": "25-10",
+    "minPrice": 827631
+   },
+   {
+    "date": "25-11",
+    "minPrice": 839950
+   },
+   {
+    "date": "25-12",
+    "minPrice": 864370
+   },
+   {
+    "date": "26-01",
+    "minPrice": 889900
+   },
+   {
+    "date": "26-02",
+    "minPrice": 1104760
+   },
+   {
+    "date": "26-03",
+    "minPrice": 1018890
+   },
+   {
+    "date": "26-04",
+    "minPrice": 1018890
+   },
+   {
+    "date": "26-05",
+    "minPrice": 935300
+   },
+   {
+    "date": "26-06",
+    "minPrice": 944390
+   },
+   {
+    "date": "26-07",
+    "minPrice": 998370
+   },
+   {
+    "date": "26-08",
+    "minPrice": 840600
+   },
+   {
+    "date": "26-09",
+    "minPrice": 773130
+   },
+   {
+    "date": "26-10",
+    "minPrice": 645220
+   },
+   {
+    "date": "26-11",
+    "minPrice": 1066990
+   }
+  ],
+  "maxPrice": 1104760,
+  "minPrice": 645220
+ }
+}

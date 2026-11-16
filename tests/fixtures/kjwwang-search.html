@@ -1,0 +1,78 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=euc-kr">
+<title>견적왕</title>
+</head>
+<body>
+<form name="main_search" method="post" action="/shop/product_search.html" target="_parent">
+                						<input type="text" name="main_search" class="input" value="라이젠 7800X3D"/>
+                						<a href="javascript:document.main_search.submit()" class="search_btn"></a>
+                					</form>
+<script type="text/javascript">
+	function searchListAjax(){
+		var search_cate= "";
+		$("[id=search_cate]").filter(".on").each(function(obj){
+			search_cate = $(this).attr("nodeValue");
+		});
+			
+		var url = '/skin/shop/basic/product_list_include_plist.php';		var r = Math.random()*1000000;		
+		loading_layer(true);
+		$.ajax({
+			type:"POST",
+			url: url,	
+			data:{
+				sort : sort,
+				action : "pc_estimate_keyword",
+				search_word : "라이젠 7800X3D",
+				search1 : $("#search1").val(),
+				search_query : $("#search_query").val(),
+				search_cate : search_cate,
+				sprice  : $("#sprice").val(),
+				eprice  : $("#eprice").val(),
+				page    : $("#page").val(),
+				list_sort_type : $("#list_sort_type").val(),
+				view_type : $("#view_type").val(),
+				timeid : r
+			},
+			success: function(html){
+				$("#product_list").html(html);			
+				// 견적서 탭일시
+				if($(".pc_estimate").length == 1){
+					if($(".product > li").length < 30){
+						$(".detail_more").removeClass("on");
+					}
+					kings_score_graph();
+				}
+				$("#filterArea").find(".cnt").html($("#total_num").val());										
+				loading_layer(false);
+			} 
+		});
+	}
+	
+</script>
+<!-- 페이징 및 검색 관련 히든값 -->		
+<input type="hidden" id="search_query" value="346686861d5445eafceda71f7afbfde223390338da09d05bb2fe58764506171c176033ebe85b14aa9284a07b8cbefd14475e8d8836fdc77856ee75769be1cc217ebed155bdc7fda57f1bd72a74611051e9f16e7fce210a94f2b481353ef61da930f05dff58de6ba718399f785b379a4ae02c776d5e2e7136e67bff4a2180377b5a926af73a55d70ad93d8eaa6f06afc5931063e45b09d17240c23823c551e7527517720417d741624381b5dda4fe356127b38ecdf5a7ba0e8e3a8bd30655e278aa96f1750a32ed22add4577b5b0b38b67782a3d92553b0aa1adda95d1c8b76743c20179d0d331766adb7f244895b44c7236c9a515ed81cae55d08f1ed5c2d399cff6587df284add7d753fde1441b288bfa703b161df3e3e31c28fe2498b2ab5f9aa94469f7663e1c27601beefef1a75aff769b34d4495344cf5df0ca9f0e27ed86604c7dccbddb4fae6e77491fd0c2ca29ddae0bf0cbb150259b6135e55bb8d7ecb5f80d69cc29dcf2375e15627a031d7b6f8f944e3f23218889c68a4b334d5104fcae70fd574ca231b088e2eac6b0bb44dc507fa74ab8fc01d4d4b30cb85c74393e1886d91ac10a925df5b2f55dd6e72a5cb2b050e395851fc4d1744e72a967d6f012e1ebbfb1f4a9d2dd70b97437550c1c8ed9c163b18eb7aeb45b89963dc65f331c2b48bac4d4306115d5c6be55397b9c0c549ff249f6a7e2da566319a06aeafbe492c647f3cccc8eb89bd80b3db6a85ce550f97f08a278a2ac17d8e1bc3c">
+<input type="hidden" id="page" name="page" value="1">
+<input type="hidden" id="list_sort_type" name="list_sort_type" value="">
+<input type="hidden" id="view_type" name="view_type" value="">
+<!-- 페이징 및 검색 관련 히든값 -->
+<div class="prd_search">
+<div class="select clear"><ul>
+<form name="myform" method="post" action="/shop/product_search.html">
+							<input type='hidden' name='main_search' value='라이젠 7800X3D'>
+							<input type='hidden' name='search_tab' value=''>
+						<li><a href='#' onclick='searchTab("부품"); return false;' class='basic on'>부품(4)</a></li><li><a href='#' onclick='searchTab("견적서"); return false;' class='basic'>견적서(918)</a></li>						</form>
+</ul></div>
+<dl class="search_basic">
+<dt><span>카테고리</span></dt>
+							<dd>
+								<div class="opt_all clear">
+									<ul>
+										<li><a href='#' id='search_cate' class='opt on' nodeValue='0'>전체보기 (4)</a></li><li><a href='#' id='search_cate' class='opt' nodeValue='9'>CPU (4)</a></li>									</ul>
+								</div>
+							</dd>
+</dl>
+</div>
+<div class="prd_list"><div class="prd_contents" id="product_list"></div></div>
+</body>
+</html>

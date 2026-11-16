@@ -1,0 +1,38 @@
+{
+ "desc": "",
+ "result": {
+  "cpu-ram": {
+   "result": "0001",
+   "cpuCode": "873",
+   "cpuName": "CPU",
+   "cpuMessage": "호환 문제 없습니다.",
+   "ramCode": "874",
+   "ramName": "메모리",
+   "ramMessage": "호환 문제 없습니다.",
+   "optionList": [],
+   "categoryCode": "874"
+  },
+  "cpu-mainboard": {
+   "result": "0001",
+   "cpuCode": "873",
+   "cpuName": "CPU",
+   "cpuMessage": "호환 문제 없습니다.",
+   "mainboardCode": "875",
+   "mainboardName": "메인보드",
+   "mainboardMessage": "호환 문제 없습니다.",
+   "optionList": [],
+   "categoryCode": "875"
+  },
+  "ram-mainboard": {
+   "result": "0001",
+   "ramCode": "874",
+   "ramName": "메모리",
+   "ramMessage": "호환 문제 없습니다.",
+   "mainboardCode": "875",
+   "mainboardName": "메인보드",
+   "mainboardMessage": "호환 문제 없습니다.",
+   "optionList": [],
+   "categoryCode": "874"
+  }
+ }
+}

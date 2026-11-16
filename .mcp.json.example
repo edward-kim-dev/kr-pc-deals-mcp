@@ -1,10 +1,9 @@
 {
   "mcpServers": {
-    "search-lower-price": {
+    "kr-pc-deals-mcp": {
       "type": "stdio",
       "command": "node",
-      "args": ["/absolute/path/to/search-lower-price/dist/index.js"],
-      "env": {}
+      "args": ["/absolute/path/to/kr-pc-deals-mcp/dist/index.js"]
     }
   }
 }

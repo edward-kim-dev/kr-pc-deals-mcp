@@ -1,115 +1,98 @@
-/**
- * PC 부품 카테고리.
- * 다나와/컴퓨존 검색, 카테고리 필터링에 사용된다.
- * PCPartPicker는 별도의 PcppCategory를 사용한다.
- */
-export type PartCategory =
-  | "cpu"
-  | "gpu"
-  | "motherboard"
-  | "ram"
-  | "ssd"
-  | "hdd"
-  | "psu"
-  | "case"
-  | "cooler"
-  | "monitor";
+import type { PartCategory } from "./categories.js";
 
-/** 데이터 출처 (어느 사이트에서 가져온 정보인지) */
-export type Source = "danawa" | "compuzone" | "coupang";
+/** 데이터 출처 */
+export const SOURCES = ["danawa", "compuzone", "enuri", "kjwwang"] as const;
+export type Source = (typeof SOURCES)[number];
 
-/** 판매처별 가격 정보 (다나와 제품 상세에서 추출) */
-export interface SellerPrice {
-  sellerName: string;    // 판매처명 (예: "11번가", "쿠팡")
-  price: number;         // 상품 가격
-  shippingCost: number;  // 배송비
-  totalPrice: number;    // 상품 가격 + 배송비
-  productUrl: string;    // 판매처 구매 링크
-}
-
-/** 검색 결과 제품 (다나와/컴퓨존 공통 구조) */
-export interface Product {
-  id: string;                       // 사이트별 제품 고유 ID
-  source: Source;                   // 데이터 출처
-  name: string;                     // 제품명
-  category?: PartCategory;          // 부품 카테고리 (검색 시 지정된 경우)
-  lowestPrice: number;              // 최저가 (원)
-  prices: SellerPrice[];            // 판매처별 가격 목록
-  specs: Record<string, string>;    // 스펙 (키-값 쌍, 예: {"소켓": "AM5"})
-  imageUrl?: string;                // 제품 이미지 URL
-  productUrl: string;               // 제품 상세 페이지 링크
-  reviewCount?: number;             // 리뷰 수
-}
-
-/** 가격 이력 데이터 포인트 (다나와 가격 변동 그래프) */
-export interface PriceHistoryEntry {
-  date: string;      // 날짜 (YYYY-MM-DD)
-  minPrice: number;  // 해당 일 최저가
-  maxPrice: number;  // 해당 일 최고가
-}
-
-/** 가격 이력 조회 결과 */
-export interface PriceHistory {
-  productCode: string;         // 다나와 제품 코드
-  period: number;              // 조회 기간 (개월)
-  data: PriceHistoryEntry[];   // 일별 가격 데이터
-}
-
-/** 다나와/컴퓨존/쿠팡 가격 비교 결과 */
-export interface ComparisonResult {
-  query: string;
-  danawa: Product[];
-  compuzone: Product[];
-  coupang: Product[];           // 쿠팡 파트너스 키 미설정 시 빈 배열
-  matched: {
-    danawa: Product;
-    compuzone?: Product;
-    coupang?: Product;
-    priceDiff: number;          // 최대-최소 가격 차이 (원)
-    cheaperSource: Source;      // 최저가 사이트
-  }[];
-}
-
-/** 카테고리별 한국어 라벨 (UI 표시용) */
-export const CATEGORY_LABELS: Record<PartCategory, string> = {
-  cpu: "CPU (프로세서)",
-  gpu: "그래픽카드",
-  motherboard: "메인보드",
-  ram: "메모리 (RAM)",
-  ssd: "SSD",
-  hdd: "HDD",
-  psu: "파워서플라이",
-  case: "케이스",
-  cooler: "CPU 쿨러",
-  monitor: "모니터",
+export const SOURCE_LABELS: Record<Source, string> = {
+  danawa: "다나와",
+  compuzone: "컴퓨존",
+  enuri: "에누리",
+  kjwwang: "견적왕",
 };
 
-// ─── 다나와 빌드(견적) 전용 타입 ───
-
-/** 빌드에 추가된 부품 */
-export interface BuildPart {
-  id: string;              // 다나와 제품 코드 (productSeq)
-  category: PartCategory;  // 부품 카테고리
-  name: string;            // 제품명
-  price: number;           // 최저가
+/** 검색·목록 결과의 상품 한 건 */
+export interface Product {
+  source: Source;
+  /** 사이트별 상품 코드 (다나와 pcode, 컴퓨존 ProductNo, 에누리 modelno, 견적왕 상품 번호) */
+  id: string;
+  name: string;
+  /** 원 단위 가격. 가격비교 사이트(다나와·에누리·견적왕)는 판매처 최저가, 컴퓨존은 자체 판매가. 0이면 가격 미정 */
+  price: number;
+  url: string;
+  category?: PartCategory;
+  /** 가격비교 사이트에 등록된 판매처 수 */
+  shopCount?: number;
+  /** 가격이 비정상으로 보일 때의 경고 (예: 판매처 등록 오류로 최저가가 시세보다 크게 낮음) */
+  priceWarning?: string;
 }
 
-/** 호환성 체크 결과 (부품 쌍별) */
+/** 판매처별 가격 */
+export interface SellerOffer {
+  seller: string;
+  price: number;
+  /** 배송비(원). 0은 무료배송, null은 알 수 없음 */
+  shippingFee: number | null;
+  url?: string;
+}
+
+/** 상품 상세 */
+export interface ProductDetail {
+  source: Source;
+  id: string;
+  name: string;
+  url: string;
+  /** 최저가(원). 0이면 가격 미정 */
+  price: number;
+  /** 다나와 현금 최저가 */
+  cashPrice?: number;
+  /** 스펙 요약 항목 (예: "PCIe5.0x16", "가로(길이): 338mm") */
+  specs: string[];
+  /** 판매처별 가격. 다나와는 상세 페이지에 바로 나오는 상위 판매처만 담긴다 */
+  offers: SellerOffer[];
+  maker?: string;
+  /** 다나와 등록월 (예: "2025.03.") */
+  registeredAt?: string;
+}
+
+/** 가격 변동 이력의 한 시점 */
+export interface PricePoint {
+  /** 주 단위면 "2026-10-20", 월 단위면 "2026-10" */
+  date: string;
+  /** 그 시점의 최저가(원) */
+  minPrice: number;
+  /** 한 주만 크게 떨어졌다 회복한 값 (판매처 등록 오류일 수 있음) */
+  suspicious?: boolean;
+}
+
+export interface PriceHistory {
+  productCode: string;
+  periodMonths: number;
+  /** 1·3개월은 주 단위, 6·12·24개월은 월 단위 */
+  granularity: "week" | "month";
+  /** 이상값을 뺀 기간 최저가·최고가(원). 자료가 없으면 0 */
+  lowest: number;
+  highest: number;
+  points: PricePoint[];
+}
+
+/** 사이트 하나가 실패했을 때 결과에 함께 싣는 오류 */
+export interface SourceError {
+  source: Source;
+  message: string;
+}
+
+/** 다나와 호환성 검사의 부품 쌍 결과 */
 export interface CompatibilityPair {
-  result: string;          // "0001" = 호환, 그 외 = 비호환/경고
-  parts: [string, string]; // 비교 대상 카테고리 쌍 (예: ["cpu", "ram"])
-  messages: Record<string, string>; // 카테고리별 메시지
+  /** 비교한 부품 종류 쌍 (다나와 표기, 예: ["cpu", "mainboard"]) */
+  parts: [string, string];
+  compatible: boolean;
+  /** 다나와 결과 코드. "0001"이 호환 */
+  code: string;
+  messages: string[];
 }
 
-/** 빌드 호환성 체크 전체 결과 */
 export interface CompatibilityResult {
-  compatible: boolean;     // 전체 호환 여부
+  compatible: boolean;
   pairs: CompatibilityPair[];
 }
-
-/** 빌드 상태 */
-export interface Build {
-  parts: BuildPart[];
-  createdAt: number;
-}
-

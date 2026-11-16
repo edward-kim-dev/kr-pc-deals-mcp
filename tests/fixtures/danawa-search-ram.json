@@ -1,0 +1,102 @@
+{
+ "kind": "fetched",
+ "data": {
+  "products": [
+   {
+    "prodType": 1,
+    "productSeq": "91188656",
+    "productName": "ESSENCORE KLEVV <b>DDR5</b>-<b>6000</b> CL30 FIT V 패키지 서린",
+    "bundleName": "<b>32GB</b>(16Gx2)",
+    "minPrice": 799000,
+    "shopCount": 89,
+    "categorySeq2": 874,
+    "bundleList": []
+   },
+   {
+    "prodType": 1,
+    "productSeq": "37989017",
+    "productName": "ESSENCORE KLEVV <b>DDR5</b>-<b>6000</b> CL30 CRAS V RGB WHITE 패키지 서린",
+    "bundleName": "64GB(32Gx2)",
+    "minPrice": 2199990,
+    "shopCount": 101,
+    "categorySeq2": 874,
+    "bundleList": [
+     {
+      "productSeq": "37989017",
+      "bundleName": "64GB(32Gx2)",
+      "minPrice": 2199990,
+      "shopCount": 101,
+      "selectYN": "Y"
+     },
+     {
+      "productSeq": "32076077",
+      "bundleName": "32GB(16Gx2)",
+      "minPrice": 919000,
+      "shopCount": 117,
+      "selectYN": "Y"
+     }
+    ]
+   },
+   {
+    "prodType": 1,
+    "productSeq": "124480188",
+    "productName": "KingBank <b>DDR5</b>-<b>6000</b> CL30 KRXB 패키지",
+    "bundleName": "<b>32GB</b>(16Gx2)",
+    "minPrice": 648620,
+    "shopCount": 5,
+    "categorySeq2": 874,
+    "bundleList": []
+   },
+   {
+    "prodType": 1,
+    "productSeq": "17931893",
+    "productName": "G.SKILL <b>DDR5</b>-<b>6000</b> CL36 TRIDENT Z5 NEO RGB J 패키지",
+    "bundleName": "<b>32GB</b>(16Gx2)",
+    "minPrice": 899000,
+    "shopCount": 99,
+    "categorySeq2": 874,
+    "bundleList": [
+     {
+      "productSeq": "72913664",
+      "bundleName": "64GB(32Gx2)",
+      "minPrice": 1890000,
+      "shopCount": 87,
+      "selectYN": "Y"
+     },
+     {
+      "productSeq": "17931893",
+      "bundleName": "32GB(16Gx2)",
+      "minPrice": 899000,
+      "shopCount": 99,
+      "selectYN": "Y"
+     }
+    ]
+   },
+   {
+    "prodType": 1,
+    "productSeq": "72913559",
+    "productName": "G.SKILL <b>DDR5</b>-<b>6000</b> CL36 FLARE X5 J 패키지",
+    "bundleName": "64GB(32Gx2)",
+    "minPrice": 1789990,
+    "shopCount": 59,
+    "categorySeq2": 874,
+    "bundleList": [
+     {
+      "productSeq": "17931533",
+      "bundleName": "32GB(16Gx2)",
+      "minPrice": 830000,
+      "shopCount": 90,
+      "selectYN": "Y"
+     },
+     {
+      "productSeq": "72913559",
+      "bundleName": "64GB(32Gx2)",
+      "minPrice": 1789990,
+      "shopCount": 59,
+      "selectYN": "Y"
+     }
+    ]
+   }
+  ]
+ }
+}

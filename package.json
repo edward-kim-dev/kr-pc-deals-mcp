@@ -1,9 +1,13 @@
 {
   "name": "kr-pc-deals-mcp",
   "version": "1.0.7",
-  "description": "다나와/컴퓨존/쿠팡 PC 부품 가격비교 MCP 서버",
+  "description": "다나와·에누리·견적왕·컴퓨존 PC 부품 가격비교와 조립 견적 호환성 검사 MCP 서버",
+  "mcpName": "io.github.edward-kim-dev/kr-pc-deals-mcp",
   "main": "dist/index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "kr-pc-deals-mcp": "dist/index.js"
   },
@@ -21,32 +25,35 @@
     "url": "https://github.com/edward-kim-dev/kr-pc-deals-mcp/issues"
   },
   "scripts": {
-    "build": "tsc",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "price-comparison",
     "pc-parts",
     "danawa",
-    "compuzone",
-    "coupang"
+    "enuri",
+    "compuzone"
   ],
   "author": "edward-kim-dev",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/server": "^2.4.0",
     "cheerio": "^1.2.0",
-    "dotenv": "^17.4.2",
     "iconv-lite": "^0.7.2",
     "node-cache": "^5.1.2",
-    "playwright-core": "^1.62.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
     "@types/node": "^25.5.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

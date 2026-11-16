@@ -1,0 +1,132 @@
+{
+ "kind": "fetched",
+ "data": {
+  "products": [
+   {
+    "prodType": 1,
+    "productSeq": "77379380",
+    "productName": "MSI 지포스 <b>RTX</b> <b>5070</b> 게이밍 트리오 OC D7 12GB 트라이프로져4",
+    "makerName": "MSI",
+    "minPrice": 1449000,
+    "totalPrice": 1449000,
+    "shopCount": 51,
+    "categorySeq1": 861,
+    "categorySeq2": 876,
+    "categorySeq3": 972,
+    "categorySeq4": 0,
+    "priceCompareStatusType": "가격비교",
+    "imageUrl": "https://img.danuri.io/catalog-image/380/379/077/c686a813bbc14b9fb65345d2e22e03c2.jpeg?v=20261116130346",
+    "linkUrl": "https://prod.danawa.com/info/?pcode=77379380&keyword=RTX+5070&cate=112753",
+    "inputDate": "25.03"
+   },
+   {
+    "prodType": 1,
+    "productSeq": "91768979",
+    "productName": "PALIT 지포스 <b>RTX</b> <b>5070</b> Ti GAMINGPRO-S D7 16GB 이엠텍",
+    "makerName": "PALIT",
+    "minPrice": 2110630,
+    "totalPrice": 2113630,
+    "shopCount": 126,
+    "categorySeq1": 861,
+    "categorySeq2": 876,
+    "categorySeq3": 972,
+    "categorySeq4": 0,
+    "priceCompareStatusType": "가격비교",
+    "imageUrl": "https://img.danuri.io/catalog-image/979/768/091/7b934e30c10a4c0d998754bc6ee56a1f.jpg?v=20261116134451",
+    "linkUrl": "https://prod.danawa.com/info/?pcode=91768979&keyword=RTX+5070&cate=112753",
+    "inputDate": "25.06"
+   },
+   {
+    "prodType": 1,
+    "productSeq": "90160715",
+    "productName": "MSI 지포스 <b>RTX</b> <b>5070</b> Ti 게이밍 트리오 OC D7 16GB 트라이프로져4",
+    "makerName": "MSI",
+    "minPrice": 2286790,
+    "totalPrice": 2286790,
+    "shopCount": 9,
+    "categorySeq1": 861,
+    "categorySeq2": 876,
+    "categorySeq3": 972,
+    "categorySeq4": 0,
+    "priceCompareStatusType": "가격비교",
+    "imageUrl": "https://img.danuri.io/catalog-image/715/160/090/e06024249c394857ac4ba0a284726686.jpg?v=20261116133805",
+    "linkUrl": "https://prod.danawa.com/info/?pcode=90160715&keyword=RTX+5070&cate=112753",
+    "inputDate": "25.05"
+   },
+   {
+    "prodType": 1,
+    "productSeq": "79402577",
+    "productName": "PALIT 지포스 <b>RTX</b> <b>5070</b> INFINITY 3 D7 12GB 이엠텍",
+    "makerName": "PALIT",
+    "minPrice": 1368830,
+    "totalPrice": 1372830,
+    "shopCount": 221,
+    "categorySeq1": 861,
+    "categorySeq2": 876,
+    "categorySeq3": 972,
+    "categorySeq4": 0,
+    "priceCompareStatusType": "가격비교",
+    "imageUrl": "https://img.danuri.io/catalog-image/577/402/079/618b05b68c4b49b6993dde8de5152d87.jpg?v=20261116134631",
+    "linkUrl": "https://prod.danawa.com/info/?pcode=79402577&keyword=RTX+5070&cate=112753",
+    "inputDate": "25.04"
+   },
+   {
+    "prodType": 1,
+    "productSeq": "77319413",
+    "productName": "ZOTAC GAMING 지포스 <b>RTX</b> <b>5070</b> SOLID OC D7 12GB",
+    "makerName": "ZOTAC",
+    "minPrice": 1355310,
+    "totalPrice": 1355310,
+    "shopCount": 166,
+    "categorySeq1": 861,
+    "categorySeq2": 876,
+    "categorySeq3": 972,
+    "categorySeq4": 0,
+    "priceCompareStatusType": "가격비교",
+    "imageUrl": "https://img.danuri.io/catalog-image/413/319/077/02024ce54a6d4cf291e54e9edbf76e34.jpg?v=20261116134448",
+    "linkUrl": "https://prod.danawa.com/info/?pcode=77319413&keyword=RTX+5070&cate=112753",
+    "inputDate": "25.03"
+   },
+   {
+    "prodType": 3,
+    "productSeq": "TH201_9283813730",
+    "productName": "그래픽 카드 홀더 <b>RTX</b> 5090 4090 <b>5070</b> 미니 ITX 마이크로 ATX 타이트 빌드를 위한 Net Straight 소형 GPU",
+    "makerName": "",
+    "minPrice": 14370,
+    "totalPrice": 14370,
+    "shopCount": 0,
+    "categorySeq1": 861,
+    "categorySeq2": 876,
+    "categorySeq3": 972,
+    "categorySeq4": 0,
+    "priceCompareStatusType": "가격비교",
+    "imageUrl": "https://ep-cdn.011st.com/11dims/resize/900x900/quality/75/11src/product/9283813730/B.webp?874823680",
+    "linkUrl": "https://prod.danawa.com/bridge/go_link_goods.php?cate_c1=861&cate_c2=876&cate_c3=972&cate_c4=0&cmpny_c=TH201&link_prod_c=9283813730&keyword=RTX+5070&r=17948043336811&cate=112753",
+    "inputDate": "26.04"
+   }
+  ],
+  "count": {
+   "total": 373,
+   "all": 373,
+   "vm": 115,
+   "va": 4420
+  },
+  "page": {
+   "total": 10,
+   "current": 1
+  },
+  "keyword": {
+   "powerLink": "지포스 RTX 5060"
+  },
+  "category": {
+   "ui": {
+    "code": 112753,
+    "name": "컴퓨터/노트북/조립PC|주요부품|그래픽카드(GPU)"
+   },
+   "physical": {
+    "code": "861|876|972|0",
+    "name": "PC 주요 부품|그래픽카드|NVIDIA 계열"
+   }
+  }
+ }
+}

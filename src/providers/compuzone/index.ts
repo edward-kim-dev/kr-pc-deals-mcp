@@ -1,2 +1,2 @@
 export { searchCompuzone } from "./search.js";
-export { getCompuzoneProductDetail } from "./product.js";
+export { getCompuzoneProduct } from "./product.js";

@@ -1,9 +1,8 @@
 # kr-pc-deals-mcp
 
-> AI한테 "100만원으로 게이밍 PC 짜줘"라고 하면, 다나와/컴퓨존 최저가를 비교해서 진짜 견적을 짜줍니다.
+> AI한테 "100만원으로 게이밍 PC 짜줘"라고 하면, 다나와·에누리·견적왕·컴퓨존 실시간 가격을 비교해서 진짜 견적을 짜 줍니다.
 
-한국 PC 부품 가격비교 및 조립 견적 MCP 서버입니다.
-Claude, ChatGPT, Cursor 등 MCP를 지원하는 모든 AI 앱에서 사용할 수 있습니다.
+한국 PC 부품 가격비교와 조립 견적 호환성 검사를 하는 MCP 서버입니다. Claude Desktop, Claude Code, Cursor처럼 로컬(stdio) MCP 서버를 지원하는 AI 앱에서 씁니다. API 키나 회원가입이 필요 없습니다.
 
 ## 데모
 
@@ -17,23 +16,23 @@ Claude, ChatGPT, Cursor 등 MCP를 지원하는 모든 AI 앱에서 사용할 �
 ![컴퓨존 상품 링크](https://raw.githubusercontent.com/edward-kim-dev/kr-pc-deals-mcp/main/docs/images/03-product-link-compuzone.png)
 ![추가 질문 및 의견](https://raw.githubusercontent.com/edward-kim-dev/kr-pc-deals-mcp/main/docs/images/05-followup-qa.png)
 
-## 주요 기능
+## 할 수 있는 일
 
-- **부품 검색** — 다나와 + 컴퓨존 통합 검색
-- **가격 비교** — 동일 제품의 크로스사이트 최저가 비교
-- **가격 이력** — 다나와 가격 변동 추적 (1/3/6/12개월)
-- **빌드 견적** — 부품을 하나씩 추가하며 견적 구성, 합계 자동 계산
-- **호환성 체크** — 다나와 가상견적 API 기반 CPU-메인보드-RAM 호환성 자동 검증
-
----
+- **부품 검색**: 가격비교 사이트 다나와·에누리·견적왕과 쇼핑몰 컴퓨존을 한 번에 검색합니다.
+- **사이트 간 가격 비교**: 같은 제품끼리 묶어 어느 사이트가 얼마나 싼지 알려 줍니다. 모델번호·브랜드·제품군·용량·색상·포장(그래픽카드는 OC·SFF 표기까지)이 확실히 같을 때만 묶고, 포장이 안 적힌 CPU처럼 여러 제품 중 어느 것인지 알 수 없으면 묶지 않습니다.
+- **최저가 찾기**: 검색어에 모델번호가 있으면 그 모델 중에서만, 용량(16GB 등)이 있으면 다른 용량이 적힌 상품을 빼고 가장 싼 상품을 고릅니다. 맞는 상품이 없으면 다른 모델로 대신하지 않고 없다고 알려 줍니다.
+- **카테고리 인기 목록**: 다나와 인기 상품으로 후보를 넓게 봅니다.
+- **상품 상세**: 스펙 요약과 판매처별 가격(현금가·카드가 구분)을 봅니다.
+- **견적 검사**: 부품 목록의 합계, 빠진 필수 부품, CPU·메인보드·RAM 호환성(다나와 PC견적 기준)을 확인합니다.
+- **가격 이력**: 다나와 최저가 변동을 봅니다 (1·3개월은 주 단위, 6·12·24개월은 월 단위). 한 주만 크게 떨어졌다 회복한 값은 판매처 등록 오류일 수 있어 따로 표시합니다. 다른 사이트는 가격 이력을 공개 페이지로 주지 않아 다나와만 됩니다.
 
 ## 빠른 시작
 
-다나와/컴퓨존만 사용하려면 아래 설정으로 충분합니다. 쿠팡 데이터까지 활용하려면 [쿠팡 활성화](#쿠팡-활성화-선택-실험적) 섹션을 참고하세요.
+Node.js 20 이상이 필요합니다.
 
 ### Claude Desktop
 
-`Settings` → `Developer` → `Edit Config`에서 `claude_desktop_config.json`을 열고 아래를 추가:
+`Settings` → `Developer` → `Edit Config`에서 `claude_desktop_config.json`을 열고 아래를 추가합니다.
 
 ```json
 {
@@ -49,12 +48,12 @@ Claude, ChatGPT, Cursor 등 MCP를 지원하는 모든 AI 앱에서 사용할 �
 ### Claude Code
 
 ```bash
-claude mcp add kr-pc-deals-mcp npx -- -y kr-pc-deals-mcp
+claude mcp add kr-pc-deals-mcp -- npx -y kr-pc-deals-mcp
 ```
 
 ### Cursor
 
-프로젝트 루트에 `.cursor/mcp.json` 파일 생성:
+프로젝트 루트에 `.cursor/mcp.json`을 만듭니다.
 
 ```json
 {
@@ -67,224 +66,68 @@ claude mcp add kr-pc-deals-mcp npx -- -y kr-pc-deals-mcp
 }
 ```
 
----
-
-## 쿠팡 활성화 (선택, 실험적)
-
-쿠팡은 설치된 Chrome 계열 브라우저로 공개 검색 페이지를 읽는 **브라우저 모드**로만 지원됩니다.
-MCP 클라이언트 설정의 `env`에 아래 값을 추가하면 활성화됩니다. (미설정 시 다나와/컴퓨존만 동작)
-
-```json
-{
-  "mcpServers": {
-    "kr-pc-deals-mcp": {
-      "command": "npx",
-      "args": ["-y", "kr-pc-deals-mcp"],
-      "env": {
-        "COUPANG_MODE": "browser"
-      }
-    }
-  }
-}
-```
-
-Claude Code:
-
-```bash
-claude mcp add kr-pc-deals-mcp -e COUPANG_MODE=browser npx -- -y kr-pc-deals-mcp
-```
-
-- Google Chrome, Microsoft Edge 또는 Chromium이 설치되어 있어야 합니다.
-- 로그인 정보나 기존 브라우저 쿠키를 사용하지 않으며, 별도의 백그라운드 브라우저를 실행합니다.
-- 브라우저가 자동 탐지되지 않으면 `COUPANG_BROWSER_EXECUTABLE_PATH`에 실행 파일의 절대 경로를 지정할 수 있습니다.
-
-> ⚠️ **개인 용도 한정.** 브라우저 모드는 쿠팡 이용약관 및 페이지 구조 변경에 따라 언제든 동작하지 않을 수 있으며, 안정성이 보장되지 않습니다.
-
----
-
-## 직접 설치
-
-### 요구사항
-
-- Node.js 20 이상
-- npm 또는 yarn
-
-### 설치
-
-```bash
-git clone https://github.com/yourname/kr-pc-deals-mcp.git
-cd kr-pc-deals-mcp
-npm install
-```
-
-### 빌드
-
-```bash
-npm run build
-```
-
-### 실행
-
-```bash
-# 개발 모드 (TypeScript 직접 실행)
-npm run dev
-
-# 프로덕션 모드
-npm run build
-npm start
-```
-
-### 테스트
-
-```bash
-npm test
-```
-
----
-
-## 환경 변수
-
-기본 사용에는 환경변수가 필요 없습니다. 다나와/컴퓨존은 키 없이 동작합니다.
-
-선택적으로 사용할 수 있는 환경변수:
-
-| 변수 | 설명 | 기본값 |
-|------|------|--------|
-| `COUPANG_MODE` | `browser` 지정 시 쿠팡 브라우저 검색 활성화 | 미설정 (쿠팡 비활성) |
-| `COUPANG_BROWSER_EXECUTABLE_PATH` | Chrome 계열 실행 파일 절대 경로 | 자동 탐지 |
-
-### 환경변수 전달 방법
-
-| 실행 방식 | 전달 방법 |
-|---|---|
-| **npx (Claude Desktop/Code/Cursor 등 MCP 클라이언트)** | 클라이언트 설정 파일의 `env` 필드에 직접 입력 — [쿠팡 활성화](#쿠팡-활성화-선택-실험적) 참고 |
-| **로컬 개발 (`git clone` 후 `npm run dev`)** | 프로젝트 루트에 `.env` 파일 생성 (`cp .env.example .env`) |
-
-> `.env` 파일은 로컬 개발 시에만 자동 로드됩니다. npx로 실행되는 MCP 서버는 `.env`를 찾을 수 없으므로, 반드시 MCP 클라이언트 설정의 `env` 필드를 사용하세요.
-
----
+> ChatGPT는 원격(HTTP) MCP 서버만 연결할 수 있어서 이 서버(stdio)를 바로 쓸 수 없습니다.
 
 ## 사용 예시
 
-Claude나 Cursor에서 아래처럼 자연어로 질문하면 됩니다:
+AI에게 평소 말투로 물어보면 됩니다.
 
-### 부품 검색
-> "RTX 4070 SUPER 검색해줘"
-> "i7-14700K 다나와에서 찾아봐"
+- "RTX 5070 Ti 검색해줘"
+- "7800X3D 사이트별 가격 비교해줘"
+- "DDR5 32GB 최저가 찾아줘"
+- "요즘 많이 팔리는 그래픽카드 보여줘"
+- "100만원으로 게이밍 PC 견적 짜줘"
+- "이 견적 호환되는지 확인해줘"
+- "이 제품 최근 3개월 가격 변동 보여줘"
 
-### 가격 비교
-> "RTX 4070 SUPER 다나와랑 컴퓨존 가격 비교해줘"
-> "DDR5 32GB 최저가 찾아줘"
+## MCP 도구
 
-### PC 견적
-> "100만원으로 게이밍 PC 견적 짜줘"
-> "200만원 영상편집용 PC 추천해줘"
+모든 도구는 사이트를 읽기만 합니다 (`readOnlyHint`). 결과는 구조화된 JSON(`structuredContent`)이며 가격은 원 단위 정수, 0은 가격 미정입니다.
 
-### 호환성 체크
-> "이 견적 호환성 체크해줘"
-> "지금 빌드에 추가한 부품들 호환되는지 확인해줘"
+| 도구 | 하는 일 | 사이트 |
+|---|---|---|
+| `search_parts` | 키워드 검색. 상품명·가격·상품 코드·링크 | 다나와, 에누리, 견적왕, 컴퓨존 |
+| `get_product_detail` | 스펙 요약과 판매처별 가격 | 다나와, 에누리, 견적왕, 컴퓨존 |
+| `get_price_history` | 최저가 변동 (1·3개월 주 단위, 6·12·24개월 월 단위) | 다나와 |
+| `compare_prices` | 같은 제품끼리 묶어 사이트별 가격 비교 (두 사이트 이상에서 찾은 제품만) | 다나와, 에누리, 견적왕, 컴퓨존 |
+| `find_lowest_price` | 검색 결과 중 최저가 하나 (모델번호가 있으면 같은 모델만, 없으면 null) | 다나와, 에누리, 견적왕, 컴퓨존 |
+| `list_by_category` | 카테고리 인기 상품 최대 30개 (가격순 정렬 가능) | 다나와 |
+| `check_build` | 부품 목록의 합계, 빠진 필수 부품, 호환성 검사 | 다나와 |
 
-### 가격 이력
-> "이 제품 최근 3개월 가격 변동 보여줘"
+다루는 부품: CPU, 그래픽카드, 메인보드, 메모리, SSD, HDD, 파워, 케이스, CPU 쿨러, 모니터
 
----
+견적은 서버에 저장되지 않습니다. AI가 고른 부품 목록을 `check_build`에 통째로 넘겨 확인하므로, 여러 대화에서 동시에 견적을 짜도 섞이지 않습니다.
 
-## MCP 도구 목록
+## 알아 둘 점
 
-### 검색
+- 가격은 요청한 순간 사이트에 보이는 값입니다. 같은 검색은 30분 동안 저장된 결과를 씁니다. 실제 결제 가격은 판매처·카드 할인에 따라 다를 수 있습니다.
+- 다나와 검색은 사이트의 요청 간격 규칙(10초)을 지키므로, 연달아 검색하면 몇 초씩 기다릴 수 있습니다.
+- 가격비교 사이트(다나와·에누리·견적왕)의 가격은 판매처 최저가라 현금 결제가가 섞일 수 있습니다. 한 사이트만 유난히 싸면 상품 상세에서 판매처를 확인하세요.
+- 카테고리 인기 목록에서 판매처 등록 오류로 보이는 가격(같은 상품의 다른 기준가의 절반 미만)에는 경고(`priceWarning`)를 붙입니다. 검색 결과에는 이 기준가가 없어 경고가 붙지 않으니, 지나치게 싼 가격은 링크에서 확인하세요.
+- 상품 상세의 판매처 목록은 상위 판매처 최대 10곳입니다.
+- 검색은 사이트마다 첫 페이지(다나와·에누리 40개, 컴퓨존 20개, 견적왕 10개)만 읽습니다.
+- 공개 웹페이지를 읽는 방식이라, 사이트가 화면 구조를 바꾸면 일부 기능이 잠시 동작하지 않을 수 있습니다.
 
-| 도구 | 설명 |
-|------|------|
-| `search_parts` | PC 부품 키워드 검색 (다나와/컴퓨존/쿠팡/전체) |
-| `get_product_detail` | 상품 상세 정보 (스펙, 판매처별 가격) |
-| `get_price_history` | 가격 변동 이력 (1/3/6/12개월) |
-
-### 가격 비교
-
-| 도구 | 설명 |
-|------|------|
-| `compare_prices` | 다나와/컴퓨존/쿠팡 동일 제품 가격 비교 |
-| `find_lowest_price` | 통합 최저가 검색 |
-| `list_by_category` | 카테고리별 인기/최저가 목록 |
-
-### 빌드 (견적)
-
-| 도구 | 설명 |
-|------|------|
-| `build_add` | 빌드에 부품 추가 (2개 이상 시 호환성 자동 체크) |
-| `build_remove` | 빌드에서 부품 제거 |
-| `build_status` | 현재 빌드 상태 조회 |
-| `build_check_compatibility` | 다나와 API 기반 부품 간 호환성 체크 |
-
-### 지원 카테고리
-
-CPU, 그래픽카드, 메인보드, RAM, SSD, HDD, 파워서플라이, 케이스, CPU 쿨러, 모니터
-
----
-
-## 아키텍처
-
-```
-사용자 (Claude/Cursor/ChatGPT)
-  ↓ MCP Protocol (stdio)
-kr-pc-deals-mcp Server
-  ├── 다나와 Provider (검색, 상세, 가격이력, 가상견적, 호환성 API)
-  ├── 컴퓨존 Provider (검색, 상세)
-  ├── 쿠팡 Provider (선택, 브라우저 공개 검색 — COUPANG_MODE=browser)
-  └── 가격 비교 Service (크로스사이트 매칭)
-```
-
-### 차단 방지 메커니즘
-
-| 단계 | 설명 |
-| ------ | ------ |
-| 사이트별 동시성 제어 | 다나와 최대 3건/500ms, 컴퓨존 최대 2건/1,000ms, 쿠팡 브라우저 1건/1,500ms |
-| 인메모리 캐시 | 동일 검색 결과 재사용 |
-| 지수 백오프 | 차단 시 30초 → 60초 → 120초 → 최대 5분 |
-
----
-
-## 개발
+## 직접 실행·개발
 
 ```bash
-# TypeScript 타입 체크
-npx tsc --noEmit
-
-# 테스트
-npm test
-
-# 테스트 (watch 모드)
-npm run test:watch
-
-# 빌드
-npm run build
+git clone https://github.com/edward-kim-dev/kr-pc-deals-mcp.git
+cd kr-pc-deals-mcp
+npm install
+npm test          # 네트워크 없이 고정 데이터로 테스트
+npm run build     # dist/ 생성
+npm start         # stdio 서버 실행
 ```
 
----
+로컬 빌드를 AI 앱에 연결하려면 `command`를 `node`, `args`를 `["/절대경로/kr-pc-deals-mcp/dist/index.js"]`로 지정합니다 (`.mcp.json.example` 참고).
+
+개발 규칙과 구조는 [AGENTS.md](AGENTS.md), 사이트별 데이터 주소와 파싱 위치는 [docs/data-sources.md](docs/data-sources.md)에 있습니다.
 
 ## 면책 조항
 
-이 소프트웨어는 **개인적, 비상업적 용도로만** 사용하십시오.
+이 소프트웨어는 **개인적·비상업적 용도로만** 사용하세요.
 
-- 이 도구는 공개된 웹페이지의 가격 정보를 수집합니다.
-- 다나와, 컴퓨존, 쿠팡(브라우저 모드)의 이용약관을 준수할 책임은 **사용자 본인**에게 있습니다.
-- 과도한 요청으로 서버에 부하를 주는 행위는 금지합니다.
-- 수집한 데이터를 상업적으로 활용하거나 재배포하는 행위는 금지합니다.
-- 이 소프트웨어 사용으로 인한 법적 책임은 개발자가 지지 않습니다.
-
----
-
-## 라이선스
-
-MIT
-
----
-
-## 참고
-
-이 프로젝트는 [daiso-mcp](https://github.com/hmmhmmhm/daiso-mcp)의 아키텍처 패턴을 참고하여 개발되었습니다.
-
-### 관련 리소스
-- [Danawa-Crawler](https://github.com/sammy310/Danawa-Crawler) — 다나와 PC 부품 크롤러 (Python)
-- [danawa-py](https://github.com/MineEric64/danawa-py) — 다나와 Python 라이브러리
-- [awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers) — MCP 서버 목록
+- 이 도구는 다나와·에누리·견적왕·컴퓨존의 공개 웹페이지에서 가격 정보를 읽습니다. 각 사이트의 이용약관을 지킬 책임은 사용자에게 있습니다.
+- 사이트에 부담을 주지 않도록 요청 간격·횟수를 제한하고 결과를 캐시합니다. 이 제한을 풀거나 과도하게 요청하지 마세요.
+- 수집한 데이터를 상업적으로 쓰거나 재배포하지 마세요.
+- 이 소프트웨어 사용으로 생긴 문제에 대해 개발자는 법적 책임을 지지 않습니다.
