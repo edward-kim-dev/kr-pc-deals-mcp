@@ -14,11 +14,14 @@ kr-pc-deals-mcp가 읽는 외부 페이지와 데이터 주소를 정리한 문�
 | 다나와 가격 이력 | `prod.danawa.com/info/ajax/getProductPriceList.ajax.php` | JSON | **금지** (`/info/ajax/`, 사용자 결정으로 사용) | `providers/danawa/price-history.ts` | `danawa-price-history.json` |
 | 다나와 호환성 검사 | `shop.danawa.com/virtualestimate/?methods=compatibility` | JSON | 허용 | `providers/danawa/compatibility.ts` | `danawa-compatibility.json` |
 | 에누리 키워드 검색 | `price.enuri.com/search?keyword=` | HTML + Next.js 데이터 | 허용 (Crawl-delay 1) | `providers/enuri/search.ts` | `enuri-search.html`, `enuri-search-rtx5070.html` |
+| 에누리 카테고리 인기 목록 | `price.enuri.com/list?category=` | HTML + Next.js 데이터 | 허용 (Crawl-delay 1) | `providers/enuri/list.ts` | `enuri-list-gpu.html` |
 | 에누리 상품 상세 | `price.enuri.com/catalog/{modelno}` | HTML + Next.js 데이터 | 허용 (Crawl-delay 1) | `providers/enuri/product.ts` | `enuri-product.html` |
 | 견적왕 검색 화면 (토큰) | `kjwwang.com/shop/product_search.html?main_search=` | HTML (EUC-KR) | 허용 | `providers/kjwwang/search.ts`, `parser.ts` | `kjwwang-search.html`, `kjwwang-search-rtx5070.html` |
 | 견적왕 검색 목록 | `kjwwang.com/skin/shop/basic/product_list_include_plist.php` (POST) | HTML 조각 (EUC-KR) | 허용 | `providers/kjwwang/search.ts`, `parser.ts` | `kjwwang-list.html`, `kjwwang-list-rtx5070.html` |
+| 견적왕 카테고리 인기 목록 | `kjwwang.com/skin/shop/basic/product_list_include_plist.php` (POST, 분류 폼) | HTML 조각 (EUC-KR) | 허용 | `providers/kjwwang/list.ts` | `kjwwang-category-gpu.html` |
 | 견적왕 상품 상세 | `kjwwang.com/shop/product_detail.html?pd_no=` | HTML (EUC-KR) | 허용 | `providers/kjwwang/product.ts`, `parser.ts` | `kjwwang-product.html` |
 | 컴퓨존 키워드 검색 | `www.compuzone.co.kr/search/search_list.php` | HTML 조각 (EUC-KR) | 허용 | `providers/compuzone/search.ts`, `parser.ts` | `compuzone-search.html` |
+| 컴퓨존 카테고리 인기 목록 | `www.compuzone.co.kr/product/product_list.php` (POST) | HTML 조각 (EUC-KR) | 허용 | `providers/compuzone/list.ts` | `compuzone-list-gpu.html` |
 | 컴퓨존 상품 상세 | `www.compuzone.co.kr/product/product_detail.htm` | HTML (EUC-KR) | 허용 | `providers/compuzone/product.ts`, `parser.ts` | `compuzone-product.html` |
 
 고정 데이터는 `tests/fixtures/`에 있고, 실제 응답에서 필요한 부분만 잘라 만든 것입니다 (컴퓨존·견적왕은 UTF-8로 바꿔 저장, 테스트에서 다시 EUC-KR로 인코딩). 이름에 `rtx5070`이 붙은 것과 `danawa-search.json`·`compuzone-search.html`은 네 사이트의 같은 "RTX 5070" 검색 응답이라 사이트 간 묶음 테스트에 함께 쓴다.
@@ -93,7 +96,7 @@ GET https://prod.danawa.com/list/?cate={목록 cate}
 | `price.promotionMinPriceQ` | 같은 상품의 다른 기준가. `price.min`이 이것의 절반도 안 되면 판매처 등록 오류로 보고 `priceWarning`을 붙인다 |
 | `stats.shopCount` | 판매처 수 |
 
-- 서버가 그려 주는 것은 첫 화면(인기순 30개)뿐이다. URL의 `sort`·`page`는 무시되고, 다른 정렬·페이지는 robots.txt가 막은 `/api/`로만 받을 수 있다. 그래서 `list_by_category`의 가격순은 이 30개를 다시 정렬한 결과다.
+- 서버가 그려 주는 것은 첫 화면(인기순 30개)뿐이다. URL의 `sort`·`page`는 무시되고, 다른 정렬·페이지는 robots.txt가 막은 `/api/`로만 받을 수 있다. 그래서 `list_by_category`의 가격순은 이 30개를 다시 정렬한 결과다 (다른 사이트도 같은 방식).
 - 가상견적 상품 목록(`shop.danawa.com/virtualestimate/?methods=product`)은 쓰지 않는다. 그 가격은 견적용 판매처(`marketPlaceSeq`) 가격이라 다나와 최저가와 다르다.
 
 ### 상품 상세
@@ -194,6 +197,16 @@ GET https://price.enuri.com/search?keyword={검색어}[&category={에누리 카�
 | `category.categoryId` | 카테고리 코드 → 부품 종류 |
 | `purchaseOptions[]` | 같은 묶음의 다른 옵션 (`modelId`, `optionName`, `price`, `mallCount`). 옵션마다 카탈로그 번호가 따로 있어 별도 상품으로 펼쳐 대표 상품들 뒤에 붙인다. 이름 없는 옵션은 뺀다 |
 
+### 카테고리 인기 목록
+
+```
+GET https://price.enuri.com/list?category={에누리 카테고리 코드}
+```
+
+- 첫 화면(인기순 `POPULAR` 40개)을 서버가 그려 보낸다. 직렬화 데이터의 `"initProductList"`가 검색 화면과 같은 형식이라 검색 파서로 읽는다 (같은 필드, 가격비교 카탈로그 상품만).
+- 정렬(`initListControls.sortOptions`: 인기순·최저가순·신상품순 …)과 다음 페이지는 화면이 `/api/`(robots.txt 금지)로 다시 불러오므로 쓰지 않는다.
+- 카테고리 목록이 비어 있으면 점검 화면이나 구조 변경으로 보고 오류를 낸다 (캐시하지 않음).
+
 ### 상품 상세
 
 ```
@@ -238,6 +251,23 @@ GET https://price.enuri.com/catalog/{modelno}
 
 - 결과가 없으면 `#total_num` 값이 0이고 "검색결과가 없습니다"가 나온다. 상품도 이 문구도 없으면 오류를 낸다.
 
+### 카테고리 인기 목록
+
+분류 화면(`/shop/product_list.html?ct_no={분류}`)은 상품을 직접 그리지 않고 화면 스크립트가 검색과 같은 목록 주소에 POST로 불러온다. 검색과 달리 토큰이 필요 없다.
+
+```
+POST https://kjwwang.com/skin/shop/basic/product_list_include_plist.php
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: https://kjwwang.com/shop/product_list.html?ct_no={분류}
+
+depth=2&cate1={상위 분류}&cate2={분류}&search_cate=0&search=&search1=&sprice=&eprice=&page=1&list_sort_type=&view_type=list&estimate_company=
+```
+
+- 부품 10종은 모두 2단계 분류다. 상위 분류(`cate1`)는 부품이 "PC주요부품"(2), 모니터가 "모니터/노트북/미니PC"(6082)다.
+- `list_sort_type` 빈 값이 인기상품순이다 (`lowPrice`·`highPrice`·`newProduct`도 있다). 한 번에 10개를 주며 첫 페이지만 읽는다.
+- 응답은 검색 목록과 같은 형식이라 같은 파서로 읽는다.
+
 ### 상품 상세
 
 ```
@@ -271,6 +301,22 @@ X-Requested-With: XMLHttpRequest
 - 목록 전체는 `.listView`/`.prdH_wrap`이 감싼다. 상품 이름은 반드시 그 상품의 `li` 안에서만 찾는다.
 - 결과가 없으면 "(총 0 개의 상품)", "해당 검색어로 검색된 상품이 없습니다."가 나온다. 상품도 이 문구도 없으면 점검 화면이나 구조 변경으로 보고 오류를 낸다 (빈 결과로 캐시하지 않음).
 - 한 페이지(최대 20개)만 읽는다. 검색어는 UTF-8로 보내도 된다 (한글 검색 확인).
+
+### 카테고리 인기 목록
+
+분류 화면(`/product/product_list.htm?BigDivNo=&MediumDivNo=`)은 상품을 화면 스크립트(`script/product_list.js`의 `getProductList`)가 숨은 폼(`global_form`)을 POST해 불러온다.
+
+```
+POST https://www.compuzone.co.kr/product/product_list.php
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: https://www.compuzone.co.kr/product/product_list.htm?BigDivNo={big}&MediumDivNo={medium}
+
+actype=getList&BigDivNo={big}&MediumDivNo={medium}&DivNo=0&PageCount=60&StartNum=0&PageNum=1&PreOrder=sale_order&lvm=L&ScrollPage=1&ProductType=list
+```
+
+- `PreOrder`: `recommand`(추천순, 화면 기본), `sale_order`(판매량순), `low_price`, `hi_price`, `new`, `sale_price`(할인율순), `used_count`(후기순). 인기 목록이므로 판매량순을 쓴다.
+- 한 번에 20개(스크롤 한 단위)를 준다. 첫 단위만 읽는다. 응답은 검색 목록과 같은 `li.li-obj` 조각이라 같은 파서로 읽는다.
 
 ### 상품 상세
 
@@ -308,7 +354,7 @@ GET https://www.compuzone.co.kr/product/product_detail.htm?ProductNo={상품번�
 | 종류 | 유지 시간 |
 |---|---|
 | 검색 결과 (네 사이트) | 30분 |
-| 카테고리 목록 | 30분 |
+| 카테고리 인기 목록 (네 사이트) | 30분 |
 | 상품 상세 | 1시간 |
 | 가격 이력 | 6시간 |
 | 호환성 검사 (같은 상품 조합) | 24시간 |

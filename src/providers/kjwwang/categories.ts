@@ -2,8 +2,8 @@ import type { PartCategory } from "../../core/categories.js";
 
 /**
  * 견적왕 카테고리 번호.
- * 검색 목록 POST의 `search_cate` 값이며, 분류 목록 주소 `/shop/product_list.html?ct_no=`의 번호와 같다.
- * 모니터만 대분류이고 나머지는 "PC 주요부품"(ct_no=2)의 하위 분류다.
+ * 검색 목록 POST의 `search_cate` 값이며, 분류 화면 주소 `/shop/product_list.html?ct_no=`의 번호와 같다.
+ * 모두 2단계 분류다. 부품은 "PC주요부품"(ct_no=2), 모니터는 "모니터/노트북/미니PC"(ct_no=6082) 아래에 있다.
  */
 export const KJWWANG_CATEGORIES: Record<PartCategory, string> = {
   cpu: "9",
@@ -39,6 +39,15 @@ export function categoryFromKjwwangNames(names: string[]): PartCategory | undefi
     if (category) return category;
   }
   return undefined;
+}
+
+/** 분류 화면이 목록 POST에 보내는 상위 분류 번호(cate1) */
+export function kjwwangParentCategory(category: PartCategory): string {
+  return category === "monitor" ? "6082" : "2";
+}
+
+export function kjwwangCategoryUrl(category: PartCategory): string {
+  return `https://kjwwang.com/shop/product_list.html?ct_no=${KJWWANG_CATEGORIES[category]}`;
 }
 
 export function kjwwangProductUrl(pdNo: string): string {

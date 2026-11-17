@@ -73,10 +73,13 @@ describe("listDanawaCategory", () => {
   beforeEach(useFastNetwork);
   afterEach(restoreNetwork);
 
-  it("sort=price면 가격 낮은 순으로 정렬하고 가격 미정은 뒤로 보낸다", async () => {
-    stubFetch(SITE_ROUTES);
-    const products = await listDanawaCategory("gpu", { sort: "price", limit: 10 });
-    expect(products.map((p) => p.price)).toEqual([698960, 746100, 787890, 0]);
+  it("첫 화면 전체를 인기순 그대로 돌려주고 캐시한다", async () => {
+    const { calls } = stubFetch(SITE_ROUTES);
+    const first = await listDanawaCategory("gpu");
+    const second = await listDanawaCategory("gpu");
+    expect(first.map((p) => p.id)).toEqual(["85410707", "122676813", "89732453", "77379380"]);
+    expect(second).toEqual(first);
+    expect(calls).toHaveLength(1);
   });
 
   it("카테고리 목록 페이지 코드로 요청한다", async () => {

@@ -1,6 +1,6 @@
 import type { PartCategory } from "../../core/categories.js";
 
-/** 컴퓨존 검색의 카테고리 필터 (BigDivNo / MediumDivNo) */
+/** 컴퓨존 카테고리 번호 (BigDivNo / MediumDivNo). 검색 필터와 분류 화면에 똑같이 쓴다 */
 export const COMPUZONE_CATEGORIES: Record<PartCategory, { big: string; medium: string }> = {
   cpu: { big: "4", medium: "1012" },
   gpu: { big: "4", medium: "1016" },

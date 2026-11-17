@@ -3,13 +3,13 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { comparePrices, DEFAULT_GROUP_LIMIT, findLowestPrice } from "../services/price-compare.js";
-import { SEARCH_SOURCES } from "../services/sources.js";
-import { listDanawaCategory, LIST_PAGE_SIZE } from "../providers/danawa/index.js";
-import { SOURCE_LABELS } from "../core/types.js";
+import { LIST_SOURCES, SEARCH_SOURCES, listCategoryOnSources } from "../services/sources.js";
+import { SOURCE_LABELS, type Source } from "../core/types.js";
 import { categorySchema, noticeSchema, productSchema, sourceErrorSchema, sourceSchema } from "./schemas.js";
 import { READ_ONLY_WEB, toolError, toolResult } from "./result.js";
 
 const SITE_NAMES = SEARCH_SOURCES.map((s) => SOURCE_LABELS[s]).join("·");
+const LIST_SITE_NAMES = LIST_SOURCES.map((s) => SOURCE_LABELS[s]).join("·");
 
 export function registerCompareTools(server: McpServer): void {
   server.registerTool(
@@ -105,27 +105,32 @@ export function registerCompareTools(server: McpServer): void {
     {
       title: "카테고리 인기 목록",
       description:
-        `다나와 카테고리의 인기 상품을 최대 ${LIST_PAGE_SIZE}개 돌려준다. 무엇을 살지 정하기 전에 후보를 넓게 볼 때 쓴다. ` +
-        `sortBy가 "price"면 인기 상위 ${LIST_PAGE_SIZE}개를 가격 낮은 순으로 다시 정렬한다 (카테고리 전체의 최저가순이 아니다).`,
+        `부품 종류별 인기 상품을 ${LIST_SITE_NAMES}에서 사이트마다 limit개씩 돌려준다. 무엇을 살지 정하기 전에 후보를 넓게 볼 때 쓴다. ` +
+        "사이트마다 인기순 첫 화면만 읽는다 (다나와 인기상품순 30개, 에누리 인기순 40개, 견적왕 인기상품순 10개, 컴퓨존 판매량순 20개). " +
+        'sortBy가 "price"면 사이트마다 그 인기 상위 목록을 가격 낮은 순으로 다시 정렬한다 (카테고리 전체의 최저가순이 아니다). ' +
+        "한 사이트가 실패해도 다른 사이트 결과를 주고 실패 내용은 errors에 담는다.",
       inputSchema: z.object({
         category: categorySchema.describe("부품 종류"),
         sortBy: z.enum(["popularity", "price"]).default("popularity").describe("popularity: 인기순, price: 인기 상위 중 가격 낮은 순"),
-        limit: z.number().int().min(1).max(LIST_PAGE_SIZE).default(10).describe("최대 몇 개"),
+        source: z.enum(["all", ...LIST_SOURCES] as [string, ...string[]]).default("all").describe("볼 사이트"),
+        limit: z.number().int().min(1).max(30).default(10).describe("사이트마다 최대 몇 개"),
       }),
       outputSchema: z.object({
         category: categorySchema,
         sortBy: z.enum(["popularity", "price"]),
-        results: z.array(productSchema),
+        results: z.array(productSchema).describe("사이트 순서(다나와·에누리·견적왕·컴퓨존)대로, 사이트 안에서는 sortBy 순서"),
+        errors: z.array(sourceErrorSchema),
       }),
       annotations: READ_ONLY_WEB,
     },
-    async ({ category, sortBy, limit }) => {
-      try {
-        const results = await listDanawaCategory(category, { sort: sortBy, limit });
-        return toolResult({ category, sortBy, results });
-      } catch (error) {
-        return toolError(error);
+    async ({ category, sortBy, source, limit }) => {
+      const sources = source === "all" ? undefined : [source as Source];
+      const { bySource, errors } = await listCategoryOnSources(category, { sort: sortBy, limit, sources });
+      const results = bySource.flatMap(({ products }) => products);
+      if (results.length === 0 && errors.length === bySource.length) {
+        return toolError(errors.map((e) => `${SOURCE_LABELS[e.source]}: ${e.message}`).join(" / "));
       }
+      return toolResult({ category, sortBy, results, errors });
     }
   );
 }

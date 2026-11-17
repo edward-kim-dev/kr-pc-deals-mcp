@@ -39,14 +39,14 @@ src/
 │   ├── schemas.ts        공용 zod 스키마 (Product, ProductDetail …)
 │   └── result.ts         toolResult / toolError / READ_ONLY_WEB annotations
 ├── services/
-│   ├── sources.ts        사이트 표: 검색 함수(SEARCHERS)·상세 함수(DETAIL_FETCHERS), 여러 사이트 동시 검색
+│   ├── sources.ts        사이트 표: 검색(SEARCHERS)·카테고리 인기 목록(LISTERS)·상세(DETAIL_FETCHERS), 여러 사이트 동시 호출
 │   ├── price-compare.ts  같은 제품 묶기(groupSameProducts), 최저가 고르기
 │   └── errors.ts         오류 → 사용자용 한 줄 문장
 ├── providers/            사이트별 요청·파싱 (MCP를 모른다)
 │   ├── danawa/           search(JSON) · list(Next.js 데이터) · product(옛·새 템플릿) · price-history · compatibility · categories
-│   ├── enuri/            search · product (둘 다 Next.js 데이터) · categories
-│   ├── kjwwang/          search(검색 화면 → 목록 POST) · product · parser(EUC-KR HTML) · categories
-│   └── compuzone/        search · product · parser(EUC-KR HTML) · categories
+│   ├── enuri/            search · list · product (모두 Next.js 데이터) · categories
+│   ├── kjwwang/          search(검색 화면 → 목록 POST) · list(목록 POST) · product · parser(EUC-KR HTML) · categories
+│   └── compuzone/        search · list(목록 POST) · product · parser(EUC-KR HTML) · categories
 ├── core/                 categories(부품 10종) · types(Source, SOURCE_LABELS …) · cache(node-cache) · errors(ScrapingError, InputError)
 └── utils/
     ├── http.ts           모든 외부 요청 (limiter, 차단 감지, 재시도, 타임아웃, EUC-KR, POST)
@@ -77,7 +77,7 @@ MCP 클라이언트 ─stdio→ index.ts → server.ts → tools/* → services/
 | `get_price_history` | productId, months(1/3/6/12/24) | granularity(week/month), lowest, highest, points[{date, minPrice, suspicious?}] | 다나와 가격 이력 ⚠️ (사용자 결정으로 robots.txt 금지 경로 사용) |
 | `compare_prices` | query, category?, limit(묶음 수 1–30, 기본 10) | counts[], groups[{name, products[], cheapestSources[], lowestPrice, priceGap}], errors[], notice? | 네 사이트 첫 페이지 전체 + `groupSameProducts` |
 | `find_lowest_price` | query, category? | cheapest(없으면 null), model, capacities, candidates, errors[], notice? | 네 사이트 첫 페이지 전체. 검색어에 모델번호가 있으면 같은 모델만, 용량(16GB 등)이 있으면 다른 용량이 적힌 상품은 빼고 후보로 삼음 |
-| `list_by_category` | category, sortBy(popularity/price), limit(1–30) | results[] (priceWarning?) | 다나와 카테고리 첫 화면 30개 |
+| `list_by_category` | category, sortBy(popularity/price), source(all/…), limit(1–30, 사이트마다) | results[] (priceWarning?), errors[] | 네 사이트 카테고리 인기 목록 첫 화면 (LISTERS). 가격순은 사이트마다 그 목록을 다시 정렬 |
 | `check_build` | parts[{category, productId, name, price, quantity}] | total, unpricedParts, missingCategories, compatibility{checked, compatible, pairs} | 다나와 호환성 검사 |
 
 결과 형식 규칙 (`tools/result.ts`):
@@ -148,7 +148,7 @@ MCP 클라이언트 ─stdio→ index.ts → server.ts → tools/* → services/
 
 - 기준: API 키·가입 없이 일반 GET(또는 페이지와 같은 익명 POST)으로 열리고, robots.txt가 허용하고, 403/429·챌린지가 없어야 합니다.
 - 막힌 곳 목록은 data-sources.md 끝에 있습니다.
-- 순서: `src/providers/<site>/`에 요청·파서 → `utils/http.ts`의 `createDefaultLimiters()`에 limiter → `core/types.ts`의 `SOURCES`·`SOURCE_LABELS`에 추가 (`sourceSchema`·도구의 source 목록은 여기서 따라옴) → `services/sources.ts`의 `SEARCHERS`·`DETAIL_FETCHERS`에 한 줄씩 → 고정 데이터와 테스트 (`tests/helpers.ts`의 limiter 목록·`SITE_ROUTES`도) → data-sources.md·README·이 파일 갱신.
+- 순서: `src/providers/<site>/`에 요청·파서 → `utils/http.ts`의 `createDefaultLimiters()`에 limiter → `core/types.ts`의 `SOURCES`·`SOURCE_LABELS`에 추가 (`sourceSchema`·도구의 source 목록은 여기서 따라옴) → `services/sources.ts`의 `SEARCHERS`·`LISTERS`·`DETAIL_FETCHERS`에 한 줄씩 → 고정 데이터와 테스트 (`tests/helpers.ts`의 limiter 목록·`SITE_ROUTES`도) → data-sources.md·README·이 파일 갱신.
 - `SEARCHERS` 순서가 검색 결과 순서이자 묶음의 기준 순서입니다. 상품명이 정돈된 가격비교 카탈로그를 앞에, 쇼핑몰을 뒤에 둡니다.
 
 ## 배포
@@ -165,7 +165,7 @@ MCP 클라이언트 ─stdio→ index.ts → server.ts → tools/* → services/
 ## 알려진 한계
 
 - 다나와 상세는 옛 템플릿에서 상위 판매처만 줍니다 (전체 목록은 robots.txt 금지 경로).
-- `list_by_category`는 카테고리 첫 화면(인기순 30개)만 볼 수 있습니다. 가격순은 그 30개를 다시 정렬한 것입니다.
+- `list_by_category`는 사이트마다 카테고리 첫 화면만 읽습니다 (다나와 인기상품순 30개, 에누리 인기순 40개, 견적왕 인기상품순 10개, 컴퓨존 판매량순 20개). 다른 정렬·다음 페이지는 robots.txt가 막은 경로(다나와·에누리 `/api/`)이거나 요청이 더 들어서 쓰지 않습니다. 가격순은 그 목록을 다시 정렬한 것입니다.
 - 검색은 사이트마다 첫 페이지만 읽습니다: 다나와·에누리 40개, 컴퓨존 20개, 견적왕 10개 (다나와·에누리는 용량별 옵션을 펼쳐 더 많을 수 있음).
 - 에누리 검색은 "전체상품" 탭 첫 페이지라 오픈마켓 개별 상품이 섞여 오고, 그중 가격비교 카탈로그 상품만 씁니다.
 - 가격비교 사이트의 검색 가격은 현금가 판매처를 포함한 최저가일 수 있어, 사이트 간 가격 차이가 판매 조건 차이일 수 있습니다.

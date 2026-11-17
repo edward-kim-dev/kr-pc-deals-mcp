@@ -55,7 +55,10 @@ export function restoreNetwork(): void {
   SOURCES.forEach(clearBlocked);
 }
 
-/** 고정 데이터로 응답하는 기본 경로들. 검색은 네 사이트 모두 실제 "RTX 5070"(그래픽카드) 검색 응답이다. */
+/**
+ * 고정 데이터로 응답하는 기본 경로들. 검색은 네 사이트 모두 실제 "RTX 5070"(그래픽카드) 검색 응답이고,
+ * 카테고리 목록은 그래픽카드 인기 목록이다. 견적왕 카테고리 목록 POST는 검색 목록과 주소가 같아 검색 응답을 돌려준다.
+ */
 export const SITE_ROUTES: Route[] = [
   { match: /search\.danawa\.com\/api\/search\/product-list/, body: () => fixture("danawa-search.json"), contentType: "application/json" },
   { match: /prod\.danawa\.com\/list\//, body: () => fixture("danawa-list.html") },
@@ -66,6 +69,8 @@ export const SITE_ROUTES: Route[] = [
   { match: /compuzone\.co\.kr\/product\/product_detail\.htm/, body: () => eucKr(fixture("compuzone-product.html")) },
   { match: /price\.enuri\.com\/search\?/, body: () => fixture("enuri-search-rtx5070.html") },
   { match: /price\.enuri\.com\/catalog\/\d+$/, body: () => fixture("enuri-product.html") },
+  { match: /price\.enuri\.com\/list\?category=/, body: () => fixture("enuri-list-gpu.html") },
+  { match: /compuzone\.co\.kr\/product\/product_list\.php$/, body: () => eucKr(fixture("compuzone-list-gpu.html")), contentType: "text/html; charset=euc-kr" },
   { match: /kjwwang\.com\/shop\/product_search\.html\?main_search=/, body: () => eucKr(fixture("kjwwang-search-rtx5070.html")), contentType: "text/html; charset=euc-kr" },
   { match: /kjwwang\.com\/skin\/shop\/basic\/product_list_include_plist\.php$/, body: () => eucKr(fixture("kjwwang-list-rtx5070.html")), contentType: "text/html; charset=euc-kr" },
   { match: /kjwwang\.com\/shop\/product_detail\.html\?pd_no=\d+$/, body: () => eucKr(fixture("kjwwang-product.html")), contentType: "text/html; charset=euc-kr" },

@@ -133,7 +133,18 @@ describe("MCP 서버", () => {
 
     const list = await call(client, "list_by_category", { category: "gpu", sortBy: "price", limit: 2 });
     expect(list.isError).toBeFalsy();
-    expect((list.structuredContent as { results: Array<{ price: number }> }).results.map((p) => p.price)).toEqual([698960, 746100]);
+    const listed = (list.structuredContent as { results: Array<{ source: string; price: number }>; errors: unknown[] });
+    expect(listed.errors).toEqual([]);
+    // 사이트마다 인기 상위 목록 중 가장 싼 2개
+    expect(listed.results.map((p) => `${p.source}:${p.price}`)).toEqual([
+      "danawa:698960", "danawa:746100",
+      "enuri:670000", "enuri:1329000",
+      "kjwwang:1372380", "kjwwang:1393100", // 견적왕 목록 POST는 검색 목록과 주소가 같아 검색 고정 데이터를 받는다
+      "compuzone:374000", "compuzone:699000",
+    ]);
+
+    const one = await call(client, "list_by_category", { category: "gpu", source: "enuri", limit: 3 });
+    expect((one.structuredContent as { results: Array<{ source: string }> }).results.map((p) => p.source)).toEqual(["enuri", "enuri", "enuri"]);
   });
 
   it("check_build: 합계·빠진 부품·호환성을 계산한다", async () => {
