@@ -1,6 +1,6 @@
 {
   "name": "kr-pc-deals-mcp",
-  "version": "1.0.7",
+  "version": "2.0.0",
   "description": "다나와·에누리·견적왕·컴퓨존 PC 부품 가격비교와 조립 견적 호환성 검사 MCP 서버",
   "mcpName": "io.github.edward-kim-dev/kr-pc-deals-mcp",
   "main": "dist/index.js",
