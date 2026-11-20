@@ -16,6 +16,22 @@
 ![컴퓨존 상품 링크](https://raw.githubusercontent.com/edward-kim-dev/kr-pc-deals-mcp/main/docs/images/03-product-link-compuzone.png)
 ![추가 질문 및 의견](https://raw.githubusercontent.com/edward-kim-dev/kr-pc-deals-mcp/main/docs/images/05-followup-qa.png)
 
+## English
+
+**kr-pc-deals-mcp** lets Claude Desktop, Claude Code, Cursor and other local (stdio) MCP clients build PC quotes from live Korean prices. No API key or sign-up needed.
+
+- Compares prices across Danawa, Enuri, Gyeonjeokwang and Compuzone
+- Matches identical products by model number, packaging (bulk vs. retail box), capacity and OC label
+- Checks CPU–motherboard–RAM compatibility and shows up to 24 months of price history (Danawa)
+
+Try: "Build me a gaming PC for 1,000,000 KRW" or "Compare RTX 5070 prices across sites"
+
+Requires Node.js 20+.
+
+```bash
+claude mcp add kr-pc-deals-mcp -- npx -y kr-pc-deals-mcp
+```
+
 ## 할 수 있는 일
 
 - **부품 검색**: 가격비교 사이트 다나와·에누리·견적왕과 쇼핑몰 컴퓨존을 한 번에 검색합니다.
@@ -155,3 +171,7 @@ npx @modelcontextprotocol/inspector@1.0.5 node dist/index.js
 - 사이트에 부담을 주지 않도록 요청 간격·횟수를 제한하고 결과를 캐시합니다. 이 제한을 풀거나 과도하게 요청하지 마세요.
 - 수집한 데이터를 상업적으로 쓰거나 재배포하지 마세요.
 - 이 소프트웨어 사용으로 생긴 문제에 대해 개발자는 법적 책임을 지지 않습니다.
+
+---
+
+도움이 됐다면 ⭐ 하나 부탁드려요. 다음에 만들 기능의 우선순위를 정하는 데 참고합니다.
